@@ -4,7 +4,7 @@
 A submod which allows you to listen to music from youtube in the game. Compatible with [Night Music](https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music).
 
 ## Installation:
-1. Download the latest release from the releases page.
+1. Download the latest release from [the releases page](https://github.com/Booplicate/MAS-Submods-YouTubeMusic/releases).
 
 2. Close the game and extract the content from the zip you downloaded into your `DDLC/` folder. Exactly this folder, you should have `DDLC.exe` there.
 
