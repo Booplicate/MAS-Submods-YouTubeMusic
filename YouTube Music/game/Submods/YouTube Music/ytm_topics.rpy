@@ -71,7 +71,7 @@ label ytm_monika_find_music(skip_check=False):
         response_quips = [
             "Anything new in your playlist?",
             "So, what are we looking for, [player]?",
-            "What's the song's name, [player].",
+            "What's the song's name, [player]?",
             "What should we listen to today, [player]?",
             "What are we listening to today?"
         ]
@@ -134,7 +134,8 @@ label ytm_monika_find_music(skip_check=False):
 
                     else:
                         # aka the part you will never get to
-                        m 2tfu "Reading this doesn't seem like the best use of your time, [player]."
+                        m 2tfu "Reading this doesn't seem like the best use of your time, [player].{nw}"
+                        $ _history_list.pop()
                         $ ready = True
 
                 else:
@@ -241,7 +242,6 @@ label ytm_monika_finished_caching_audio:
     else:
         m 3eua "Oh, looks like your song finished downloading."
         m 1dsa "Let me just play it for us.{w=0.5}.{w=0.5}.{nw}"
-        # TODO: maybe she could ask you if you want to play it right away or actually queue it?
         $ ytm_playAudio(store.ytm_globals.audio_to_queue)
 
         if renpy.random.randint(1, 25) == 1:
