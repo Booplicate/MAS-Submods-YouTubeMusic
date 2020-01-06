@@ -235,7 +235,7 @@ init 5 python:
 label ytm_monika_finished_caching_audio:
     if store.mas_globals.in_idle_mode or (mas_canCheckActiveWindow() and not mas_isFocused()):
         m 1eud "Oh, looks like your song finished downloading.{w=1}{nw}"
-        m 3eua "I'll just play that for us.{w=0.5}.{w=0.5}."
+        m 3eua "I'll just play that for us.{w=0.5}.{w=0.5}.{nw}"
         $ ytm_playAudio(store.ytm_globals.audio_to_queue)
 
     else:
@@ -274,6 +274,7 @@ label ytm_search_loop:
             $ _history_list.pop()
             m "Let me see what I can find.{fast}{w=0.5}{nw}"
             $ ellipsis_count = 1
+
         else:
             $ ellipsis_count += 1
             extend ".{nw}"
@@ -281,6 +282,9 @@ label ytm_search_loop:
         jump ytm_search_loop
 
     else:
+        $ _history_list.pop()
+        m "Let me see what I can find...{fast}{nw}"
+
         $ store.ytm_globals.first_pass = True
         return ytm_search_music.get()
 
@@ -290,6 +294,7 @@ label ytm_get_audio_info_loop:
         $ ytm_get_audio_info.start()
 
     if not ytm_get_audio_info.done():
+        pause 0.5
         jump ytm_get_audio_info_loop
 
     else:
@@ -307,6 +312,7 @@ label ytm_play_audio_loop:
             $ _history_list.pop()
             m "Let me just play that for us.{fast}{w=0.5}{nw}"
             $ ellipsis_count = 1
+
         else:
             $ ellipsis_count += 1
             extend ".{nw}"
@@ -314,5 +320,7 @@ label ytm_play_audio_loop:
         jump ytm_play_audio_loop
 
     else:
+        $ _history_list.pop()
+        m "Let me just play that for us...{fast}{nw}"
         $ store.ytm_globals.first_pass = True
         return ytm_play_audio.get()
