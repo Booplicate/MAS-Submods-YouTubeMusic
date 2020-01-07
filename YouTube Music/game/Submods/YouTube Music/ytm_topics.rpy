@@ -114,10 +114,10 @@ label ytm_monika_find_music(skip_check=False):
                 call ytm_search_loop
                 $ menu_list = ytm_buildMenuList(_return)
 
-                if len(menu_list) > 2:
+                if len(menu_list) > 0:
                     m 1eub "Alright! Look what I've found!"
                     show monika 1eua at t21
-                    call screen mas_gen_scrollable_menu(menu_list, (835, 40, 440, 640), -0.05)
+                    call screen mas_gen_scrollable_menu(menu_list, store.ytm_globals.MENU_AREA, store.ytm_globals.MENU_XALIGN, store.ytm_globals.MENU_CHANGED_MIND, store.ytm_globals.MENU_ANOTHER_SONG)
                     show monika at t11
 
                     if "https" in _return:
