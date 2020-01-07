@@ -31,3 +31,6 @@ These 2 utils you'll have to install manually:
 - [Plugin System](https://github.com/multimokia/MAS-Submods/tree/FunctionPluginUtil) (mandatory).
 
 - [Paste](https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste) (handy since allows you to paste links instead of typing them, but not required).
+
+## Usage:
+Monika will tell you everything in the game, just install the submod and launch the game. After her intro you can find the topic in the Music category.
