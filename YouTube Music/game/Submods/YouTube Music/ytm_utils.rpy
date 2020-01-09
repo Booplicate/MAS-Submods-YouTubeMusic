@@ -18,9 +18,9 @@ init -15 python in ytm_globals:
 
     # Maximum audio size to play from RAM (bytes)
     AUDIO_SIZE_LIMIT = 15728640
-    # Maximum chunk size for request to yt
+    # Maximum chunk size to request from yt (bytes)
     REQUEST_CHUNK = 10485760
-    # Maximum chunk size for writing data
+    # Maximum chunk size for writing data (bytes)
     WRITING_CHUNK = 262144
 
     # Url parts
@@ -39,14 +39,14 @@ init -15 python in ytm_globals:
 
     # We keep cache there
     SHORT_MUSIC_DIRECTORY = "/Submods/YouTube Music/temp/"
-    FULL_MUSIC_DIRECTORY = renpy.config.basedir + "/game/Submods/YouTube Music/temp/"
+    FULL_MUSIC_DIRECTORY = renpy.config.gamedir.replace("\\", "/") + SHORT_MUSIC_DIRECTORY
     # Cache extension
     EXTENSION = ".cache"
 
 init -10 python:
     import os
     import urllib2
-    import re
+    from re import sub
     import pafy
     from bs4 import BeautifulSoup
     from bs4 import UnicodeDammit
@@ -124,22 +124,22 @@ init -10 python:
         RETURNS:
             True if safe URL, False otherwise
         """
-        return True if re.match("https://", string) else False
+        return True if "https://" in string else False
 
     def ytm_makeSafeURL(string):
         """
-        Tries to make an safe URL from the given string
+        Tries to make a safe URL from the given string
 
         IN:
             string - a string we're trying to fix
 
         RETURNS:
-            a safe to use URL, will return the base string if it's already in appropriate format
+            a safe to use URL, will return the base string if it's already in an appropriate format
         """
-        if re.match("http://", string):
+        if "http://" in string:
             return string.replace("http://", "https://", 1)
 
-        elif re.match("https://", string):
+        elif "https://" in string:
             return string
 
         else:
@@ -147,7 +147,7 @@ init -10 python:
 
     def ytm_toSearchString(string):
         """
-        Converts raw user's input to an formatted string ready to use in the URL
+        Converts user's raw input to a formatted string ready to use in the URL
 
         IN:
             string - a string we are trying to format
@@ -155,11 +155,11 @@ init -10 python:
         RETURNS:
             a formatted string
         """
-        return re.sub("\s+", "+", re.sub("[^ a-zA-Z!_№~`\"\'\d\(\)\^\*\\-]", "", string))
+        return sub("\s+", "+", sub("[^ a-zA-Z!_№~`\"\'\d\(\)\^\*\\-]", "", string))
 
     def ytm_toSearchURL(string):
         """
-        Merges search string with YouTube's URL
+        Merges URLs' parts with user's request
 
         IN:
             string - user's search request
@@ -191,7 +191,7 @@ init -10 python:
         try:
             html = urllib2.urlopen(req, timeout = 15).read()
         except Exception as e:
-            ytm_writeLog("Failed to request an HTML data.", e)
+            ytm_writeLog("Failed to request HTML data.", e)
             return False
 
         return html
@@ -226,7 +226,7 @@ init -10 python:
             a list with tuples (video's title, video's URL)
         """
         if not html:
-            return False
+            return []
 
         videos_info = list()
 
@@ -243,7 +243,7 @@ init -10 python:
                 and not "/user" in data["href"]
                 # "/watch?v=" in data["href"]
             ):
-                videos_info.append((re.sub("[\[\]\~\{\}\"\']", "", data["title"]), store.ytm_globals.YOUTUBE + data["href"]))
+                videos_info.append((sub("[\[\]\~\{\}\"\']", "", data["title"]), store.ytm_globals.YOUTUBE + data["href"]))
 
             if i + 1 == limit:
                 break
@@ -260,10 +260,10 @@ init -10 python:
         RETURNS:
             a ready to use menu list for mas_gen_scrollable_menu()
         """
-        menu_list = list()
-
         if not videos_info:
             return []
+
+        menu_list = list()
 
         for video_data in videos_info:
             menu_list.append((video_data[0], video_data[1], False, False))
@@ -283,7 +283,7 @@ init -10 python:
         RETURN:
             True - fooked up, False - we are good
         """
-        return True if "manifest" in stream.url_https else False
+        return True if "manifest" in stream.url else False
 
     def ytm_fixStreamURL(stream):
         """
@@ -301,7 +301,8 @@ init -10 python:
             ytm_writeLog("Failed to request XML data.", e)
             return False
 
-        return re.split('</BaseURL>', re.split('<BaseURL>', re.split('codecs="opus"', xml, 1)[-1], 1)[-1], 1)[0]
+        # return re.split('</BaseURL>', re.split('<BaseURL>', re.split('codecs="opus"', xml, 1)[-1], 1)[-1], 1)[0]
+        return xml.split('codecs="opus"', 1)[1].split("<BaseURL>", 1)[1].split("</BaseURL>")[0]
 
     def ytm_getAudioInfo(url):
         """
@@ -325,7 +326,6 @@ init -10 python:
         if ytm_isBadStream(stream):
             # NOTE: Technically we can get False instead of the URL
             url_to_audio = ytm_fixStreamURL(stream)
-
         else:
             url_to_audio = stream.url
 
@@ -401,11 +401,13 @@ init -10 python:
             "User-Agent": "Just Monika! (MAS v. %s)" % config.version,
             "Range": "bytes=%s-%s" % (min_threshold, max_threshold)
         }
+
         try:
             # TODO: should have this part only once
             # Probably will require rewriting
             req = urllib2.Request(url = url, headers = headers)
             response = urllib2.urlopen(req)
+
             while True:
                 cache_buffer = response.read(store.ytm_globals.WRITING_CHUNK)
 
@@ -452,9 +454,11 @@ init -10 python:
             "User-Agent": "Just Monika! (MAS v. %s)" % config.version,
             "Range": "bytes=%s-%s" % (min_threshold, max_threshold)
         }
+
         try:
             req = urllib2.Request(url = url, headers = headers)
             response = urllib2.urlopen(req)
+
             with open(directory, 'wb') as audio_cache:
                 while True:
                     cache_buffer = response.read(store.ytm_globals.WRITING_CHUNK)
@@ -496,7 +500,6 @@ init -10 python:
         try:
             with open(directory, 'wb') as audio_cache:
                 audio_cache.write(_bytes)
-
         except Exception as e:
             ytm_writeLog("Failed to write cache on disk from RAM.", e)
             return False
@@ -522,7 +525,6 @@ init -10 python:
 
         try:
             renpy.music.queue(filenames = audio, channel = channel, loop = True, clear_queue = clear_queue, fadein = 2, tight = False)
-
         except Exception as e:
             ytm_writeLog("Failed to play audio.", e)
             return False
@@ -615,9 +617,8 @@ init -5 python:
         """
         cache = ytm_cacheData_Disk(url, content_size, directory)
         if cache:
-            # NOTE: need to change the path a little, otherwise would get a crash
-            # BUG: foook sub doesn't work bc of \\ in the string
-            store.ytm_globals.audio_to_queue = re.split("/game", directory)[1]
+            # NOTE: The Play function uses short paths so we need to cut a part of the path here
+            store.ytm_globals.audio_to_queue = directory.split(renpy.config.gamedir.replace("\\", "/"), 1)[1]
             pushEvent("ytm_monika_finished_caching_audio")
             return True
         # got an exception somewhere
