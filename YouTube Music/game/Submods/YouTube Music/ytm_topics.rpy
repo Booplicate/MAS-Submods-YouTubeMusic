@@ -183,6 +183,7 @@ label .ytm_process_audio_info(url):
                 m 3eub "We'll need to wait for a bit."
                 m 1hua "I hope you don't mind, [player]~"
                 # m "Soon we'll finish caching it and I'll queue it."
+                $ ytm_resetThread(ytm_cache_audio_from_url)
                 $ ytm_updateThreadArgs(
                     ytm_cache_audio_from_url,
                     [
@@ -204,6 +205,7 @@ label .ytm_process_audio_info(url):
                 if _return:
                     m 1hua "There we go!"
                     # m "We quickly cached it and then queued, [player]."
+                    $ ytm_resetThread(ytm_cache_audio_from_ram)
                     $ ytm_updateThreadArgs(
                         ytm_cache_audio_from_ram,
                         [_return, store.ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["ID"] + store.ytm_globals.EXTENSION]
@@ -294,7 +296,7 @@ label ytm_get_audio_info_loop:
         $ ytm_get_audio_info.start()
 
     if not ytm_get_audio_info.done():
-        pause 0.5
+        pause 0.25
         jump ytm_get_audio_info_loop
 
     else:

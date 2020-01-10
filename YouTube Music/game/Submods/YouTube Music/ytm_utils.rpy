@@ -634,6 +634,18 @@ init -5 python:
         """
         thread._th_args = args
 
+    def ytm_resetThread(thread):
+        """
+        Resets thread properties so we can start another one
+        regardless of if it's ready or not
+
+        IN:
+            thread - a thread we reset
+        """
+        thread._th_result = None
+        thread._th_done = True
+        thread.ready = True
+
     ytm_search_music = mas_threading.MASAsyncWrapper(__ytm_th_Search)
     ytm_get_audio_info = mas_threading.MASAsyncWrapper(__ytm_th_GetAudioInfo)
     ytm_play_audio = mas_threading.MASAsyncWrapper(__ytm_th_PlayAudio)
