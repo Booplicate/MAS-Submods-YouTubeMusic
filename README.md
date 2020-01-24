@@ -8,7 +8,7 @@ A submod which allows you to listen to music from youtube in the game. Compatibl
 
 2. Close the game and extract the content from the zip you downloaded into your `DDLC/` folder. Exactly this folder, you should have `DDLC.exe` there.
 
-3. Install `Plugin system` and `Paste` (links below).
+3. Install `Paste` (optionally).
 
 If you installed it correctly, your folders will look like this:
 ```
@@ -27,8 +27,8 @@ DDLC/game/
             ytm_utils.rpyc
 ```
 ## Dependencies:
-These 2 utils you'll have to install manually:
-- [Plugin System](https://github.com/multimokia/MAS-Submods/tree/FunctionPluginUtil) (mandatory).
+These 2 utils are required to use YouTube Music:
+- [Plugin System](https://github.com/multimokia/MAS-Submods/tree/FunctionPluginUtil) (mandatory, now shipped with releases).
 
 - [Paste](https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste) (handy since allows you to paste links instead of typing them, but not required).
 
