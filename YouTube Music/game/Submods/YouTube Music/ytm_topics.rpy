@@ -157,6 +157,7 @@ label ytm_monika_find_music(skip_check=False):
         del[ready]
         del[raw_search_request]
         del[lower_search_request]
+        del[no_request_counter]
 
     return
 
