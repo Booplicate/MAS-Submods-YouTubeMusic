@@ -534,20 +534,21 @@ init -10 python:
                 fadein=2,
                 tight=False
             )
+
         except Exception as e:
+            ytm_writeLog("Failed to play audio.", e)
+            return False
+
+        else:
+            store.ytm_globals.is_playing = True
+            return True
+
+        finally:
             try:
                 persistent._seen_audio.pop(audio)
             except:
                 pass
 
-            ytm_writeLog("Failed to play audio.", e)
-
-            return False
-
-        persistent._seen_audio.pop(audio)
-        store.ytm_globals.is_playing = True
-
-        return True
         # TODO: take a look at
         # renpy.music.set_queue_empty_callback
 
