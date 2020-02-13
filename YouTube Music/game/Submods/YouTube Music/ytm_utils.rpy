@@ -88,7 +88,7 @@ init -10 python:
         # return True
         if store.ytm_globals.has_connection is None:
             try:
-                urllib2.urlopen("http://www.google.com/", timeout = 15)
+                urllib2.urlopen("http://www.google.com/", timeout=15)
                 store.ytm_globals.has_connection = True
                 return store.ytm_globals.has_connection
             except urllib2.URLError as e:
@@ -186,10 +186,10 @@ init -10 python:
             "Content-Language": "en-US",
             "Accept-Charset": "utf8"
         }
-        req = urllib2.Request(url = url, headers = headers)
+        req = urllib2.Request(url=url, headers=headers)
 
         try:
-            html = urllib2.urlopen(req, timeout = 15).read()
+            html = urllib2.urlopen(req, timeout=15).read()
         except Exception as e:
             ytm_writeLog("Failed to request HTML data.", e)
             return False
@@ -213,7 +213,7 @@ init -10 python:
 
 # # # VIDEO STUFF
 
-    def ytm_getSearchResults(html, limit = store.ytm_globals.SEARCH_LIMIT):
+    def ytm_getSearchResults(html, limit=store.ytm_globals.SEARCH_LIMIT):
         """
         Gets a list of search results from the html
 
@@ -225,10 +225,10 @@ init -10 python:
         RETURNS:
             a list with tuples (video's title, video's URL)
         """
-        if not html:
-            return []
-
         videos_info = list()
+
+        if not html:
+            return videos_info
 
         try:
             bs = BeautifulSoup(ytm_clearHTML(html), "html.parser")
@@ -236,7 +236,8 @@ init -10 python:
             ytm_writeLog("Failed to parse html data. Bad encoding?", e)
             return False
 
-        for i, data in enumerate(bs.find_all("a", {"class":"yt-uix-tile-link yt-ui-ellipsis yt-ui-ellipsis-2 yt-uix-sessionlink spf-link"})):
+        i = 0
+        for data in bs.find_all("a", {"class":"yt-uix-tile-link yt-ui-ellipsis yt-ui-ellipsis-2 yt-uix-sessionlink spf-link"}):
             # damn youtube's mixes
             if (
                 not "&list=" in data["href"]
@@ -245,8 +246,9 @@ init -10 python:
             ):
                 videos_info.append((sub("[\[\]\~\{\}\"\']", "", data["title"]), store.ytm_globals.YOUTUBE + data["href"]))
 
-            if i + 1 == limit:
-                break
+                i += 1
+                if i == limit:
+                    break
 
         return videos_info
 
@@ -260,10 +262,10 @@ init -10 python:
         RETURNS:
             a ready to use menu list for mas_gen_scrollable_menu()
         """
-        if not videos_info:
-            return []
-
         menu_list = list()
+
+        if not videos_info:
+            return menu_list
 
         for video_data in videos_info:
             menu_list.append((video_data[0], video_data[1], False, False))
@@ -296,7 +298,7 @@ init -10 python:
             pure URL or False if got an exception
         """
         try:
-            xml = urllib2.urlopen(stream.url, timeout = 15).read()
+            xml = urllib2.urlopen(stream.url, timeout=15).read()
         except Exception as e:
             ytm_writeLog("Failed to request XML data.", e)
             return False
@@ -318,7 +320,7 @@ init -10 python:
         """
         try:
             video = pafy.new(url)
-            stream = video.getbestaudio(preftype = "webm")
+            stream = video.getbestaudio(preftype="webm")
         except Exception as e:
             ytm_writeLog("Failed to request audio stream.", e)
             return False
@@ -366,7 +368,7 @@ init -10 python:
 
         return directory if os.path.isfile(directory) else False
 
-    def ytm_bytesToAudioData(_bytes, name = "None"):
+    def ytm_bytesToAudioData(_bytes, name="None"):
         """
         Converts stream of bytes into AudioData obj which can be played
         via renpy's audio system
@@ -405,7 +407,7 @@ init -10 python:
         try:
             # TODO: should have this part only once
             # Probably will require rewriting
-            req = urllib2.Request(url = url, headers = headers)
+            req = urllib2.Request(url=url, headers=headers)
             response = urllib2.urlopen(req)
 
             while True:
@@ -424,7 +426,7 @@ init -10 python:
                     min_threshold = max_threshold
                     max_threshold += store.ytm_globals.REQUEST_CHUNK
                     headers["Range"] = "bytes=%s-%s" % (min_threshold, max_threshold)
-                    req = urllib2.Request(url = url, headers = headers)
+                    req = urllib2.Request(url=url, headers=headers)
                     response = urllib2.urlopen(req)
 
         except Exception as e:
@@ -456,7 +458,7 @@ init -10 python:
         }
 
         try:
-            req = urllib2.Request(url = url, headers = headers)
+            req = urllib2.Request(url=url, headers=headers)
             response = urllib2.urlopen(req)
 
             with open(directory, 'wb') as audio_cache:
@@ -476,7 +478,7 @@ init -10 python:
                         min_threshold = max_threshold
                         max_threshold += store.ytm_globals.REQUEST_CHUNK
                         headers["Range"] = "bytes=%s-%s" % (min_threshold, max_threshold)
-                        req = urllib2.Request(url = url, headers = headers)
+                        req = urllib2.Request(url = url, headers=headers)
                         response = urllib2.urlopen(req)
 
         except Exception as e:
@@ -506,7 +508,7 @@ init -10 python:
 
         return True
 
-    def ytm_playAudio(audio, clear_queue = True, channel = "music"):
+    def ytm_playAudio(audio, clear_queue=True, channel="music"):
         """
         Plays audio files/data
 
@@ -524,12 +526,24 @@ init -10 python:
             persistent.current_track = store.songs.FP_NO_SONG
 
         try:
-            renpy.music.queue(filenames = audio, channel = channel, loop = True, clear_queue = clear_queue, fadein = 2, tight = False)
+            renpy.music.queue(
+                filenames=audio,
+                channel=channel,
+                loop=True,
+                clear_queue=clear_queue,
+                fadein=2,
+                tight=False
+            )
         except Exception as e:
+            try:
+                persistent._seen_audio.pop(audio)
+            except:
+                pass
+
             ytm_writeLog("Failed to play audio.", e)
+
             return False
 
-        # always pop, otherwise we will brick persistent
         persistent._seen_audio.pop(audio)
         store.ytm_globals.is_playing = True
 
