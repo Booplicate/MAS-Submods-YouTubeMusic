@@ -54,7 +54,7 @@ init -10 python:
 
 # # # UTIL STUFF
 
-    def ytm_writeLog(msg, e):
+    def ytm_writeLog(msg, e=None):
         """
         Writes exceptions in logs
 
@@ -62,7 +62,7 @@ init -10 python:
             msg - additional info
             e - an exception
         """
-        store.mas_utils.writelog("[YTM ERROR]: %s Exception: %s\n" % (msg, str(e)))
+        store.mas_utils.writelog("[YTM ERROR]: {0} Exception: {1}\n".format(msg, e))
 
     def ytm_cleanUp():
         """
@@ -323,6 +323,12 @@ init -10 python:
             stream = video.getbestaudio(preftype="webm")
         except Exception as e:
             ytm_writeLog("Failed to request audio stream.", e)
+            return False
+
+        # sanity check
+        # when trying to get the stream for a live stream, pafy will return None
+        if stream is None:
+            ytm_writeLog("Audio stream is NoneType. Live streams are not supported.")
             return False
 
         if ytm_isBadStream(stream):
