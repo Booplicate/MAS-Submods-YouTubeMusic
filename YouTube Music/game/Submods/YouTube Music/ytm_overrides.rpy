@@ -388,10 +388,11 @@ python early:
             return rv
 
         def __init__(self, data, filename):
-            pass
+            self.filename = filename
 
         def __reduce__(self):
-            return(AudioData, (self.data, unicode(self)))
+            # Pickle as a str is safer
+            return (str, (self.filename, ))
 
     def periodic_override(self):
         """

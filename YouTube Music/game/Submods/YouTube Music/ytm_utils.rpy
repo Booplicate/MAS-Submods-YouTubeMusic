@@ -60,8 +60,11 @@ init -10 python:
 
         IN:
             msg - additional info
-            e - an exception
+            e - exception
+                (Default: None)
         """
+        if e is None:
+            e = "Unknown"
         store.mas_utils.writelog("[YTM ERROR]: {0} Exception: {1}\n".format(msg, e))
 
     def ytm_cleanUp():
@@ -75,6 +78,18 @@ init -10 python:
             for trash in os.listdir(path): os.remove(path + trash)
         except Exception as e:
             ytm_writeLog("Couldn't remove cache.", e)
+
+    def ytm_fixPersistent():
+        """
+        Just in case
+        Func to clean persistent from AudioData objects,
+        so if someone somehow got the bad data in their persistent
+        we can easily remove these bits
+        """
+        for audio in store.persistent._seen_audio.keys():
+            if isinstance(audio, AudioData):
+                store.persistent._seen_audio.pop(audio)
+                ytm_writeLog("Found bad data in persistent and removed it.")
 
 # # # URL STUFF
 
@@ -134,7 +149,7 @@ init -10 python:
             string - a string we're trying to fix
 
         RETURNS:
-            a safe to use URL, will return the base string if it's already in an appropriate format
+            safe to use URL, will return the base string if it's already in an appropriate format
         """
         if "http://" in string:
             return string.replace("http://", "https://", 1)
@@ -153,7 +168,7 @@ init -10 python:
             string - a string we are trying to format
 
         RETURNS:
-            a formatted string
+            formatted string
         """
         return sub("\s+", "+", sub("[^ a-zA-Z!_№~`\"\'\d\(\)\^\*\\-]", "", string))
 
@@ -223,7 +238,7 @@ init -10 python:
                 (Default: SEARCH_LIMIT)
 
         RETURNS:
-            a list with tuples (video's title, video's URL)
+            list with tuples (video's title, video's URL)
         """
         videos_info = list()
 
@@ -260,7 +275,7 @@ init -10 python:
             videos_info - a list of tuples with titles and URLs for the menu
 
         RETURNS:
-            a ready to use menu list for mas_gen_scrollable_menu()
+            ready to use menu list for mas_gen_scrollable_menu()
         """
         menu_list = list()
 
@@ -315,7 +330,7 @@ init -10 python:
             url - video's URL
 
         RETURNS:
-            a dict with the title, id, link to the audio stream and its size
+            dict with the title, id, link to the audio stream and its size
             or False if we got an exception
         """
         try:
@@ -367,14 +382,14 @@ init -10 python:
             audio_id - audio id (since we use it as a name for cache)
 
         RETURNS:
-            a filepath to the cache if we already have it (even if it's small)
+            filepath to the cache if we already have it (even if it's small)
             or False if found nothing
         """
         directory = store.ytm_globals.FULL_MUSIC_DIRECTORY + audio_id + store.ytm_globals.EXTENSION
 
         return directory if os.path.isfile(directory) else False
 
-    def ytm_bytesToAudioData(_bytes, name="None"):
+    def ytm_bytesToAudioData(_bytes, name="Unknown"):
         """
         Converts stream of bytes into AudioData obj which can be played
         via renpy's audio system
@@ -382,12 +397,12 @@ init -10 python:
         IN:
             _bytes - a stream of bytes we will convert
             name - a name to use for that object
-                (Default: "None")
+                (Default: "Unknown")
 
         RETURNS:
-            an AudioData object
+            AudioData object
         """
-        # NOTE: I could generate a name instead of using "None"
+        # NOTE: I could generate a name instead of using "Unknown"
         return AudioData(_bytes, name)
 
     def ytm_cacheData_RAM(url, content_size):
@@ -400,7 +415,7 @@ init -10 python:
             content_size - the data's size
 
         RETURNS:
-            The cache if we successfully downloaded it, False if got an exception
+            cache if we successfully downloaded it, False if got an exception
         """
         cache = b""
         min_threshold = 0
@@ -453,7 +468,7 @@ init -10 python:
                 NOTE: should include the file's name
 
         RETURNS:
-            The cache if we successfully downloaded it, False if got an exception
+            cache if we successfully downloaded it, False if got an exception
         """
         cache_size = 0
         min_threshold = 0
@@ -590,7 +605,7 @@ init -5 python:
             False if got an exception
         """
         cache = ytm_cacheData_RAM(url, audio_size)
-        if cache and ytm_playAudio(ytm_bytesToAudioData(cache, video_id), clear_queue):
+        if cache and ytm_playAudio(ytm_bytesToAudioData(cache, "YouTubeID: "+video_id), clear_queue):
                 return cache
         # got an exception somewhere
         return False
@@ -603,7 +618,7 @@ init -5 python:
             url - a url we will get data from
 
         RETURNS:
-            a dict with various data (check ytm_getAudioInfo() for more info)
+            dict with various data (check ytm_getAudioInfo() for more info)
         """
         return ytm_getAudioInfo(url)
 
