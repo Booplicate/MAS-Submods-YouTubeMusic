@@ -86,7 +86,7 @@ init -10 python:
         so if someone somehow got the bad data in their persistent
         we can easily remove these bits
         """
-        for audio in store.persistent._seen_audio.keys():
+        for audio in store.persistent._seen_audio.iterkeys():
             if isinstance(audio, AudioData):
                 store.persistent._seen_audio.pop(audio)
                 ytm_writeLog("Found bad data in persistent and removed it.")
@@ -126,8 +126,7 @@ init -10 python:
         """
         if "/www.youtube.com/" in string or "/youtu.be/" in string:
             return True
-        else:
-            return False
+        return False
 
     def ytm_isSafeURL(string):
         """
@@ -146,10 +145,10 @@ init -10 python:
         Tries to make a safe URL from the given string
 
         IN:
-            string - a string we're trying to fix
+            string - the string we're trying to fix
 
         RETURNS:
-            safe to use URL, will return the base string if it's already in an appropriate format
+            safe to use URL, will return the base string if it's already in the appropriate format
         """
         if "http://" in string:
             return string.replace("http://", "https://", 1)
@@ -165,7 +164,7 @@ init -10 python:
         Converts user's raw input to a formatted string ready to use in the URL
 
         IN:
-            string - a string we are trying to format
+            string - the string we are trying to format
 
         RETURNS:
             formatted string
@@ -177,10 +176,10 @@ init -10 python:
         Merges URLs' parts with user's request
 
         IN:
-            string - user's search request
+            string - the user's search request
 
         RETURNS:
-            a ready to use YouTube URL with the search request
+            ready to use YouTube URL with the search request
         """
         return store.ytm_globals.YOUTUBE + store.ytm_globals.SEARCH + ytm_toSearchString(string)
 
@@ -217,7 +216,7 @@ init -10 python:
         NOTE: Won't rise exceptions even if it fails.
 
         IN:
-            html - a dirty html data that we're clearing
+            html - dirty html data that we're clearing
 
         RETURNS:
             potentially clear html data
@@ -233,7 +232,7 @@ init -10 python:
         Gets a list of search results from the html
 
         IN:
-            html - an html we get videos from
+            html - the html we get videos from
             limit - maximum amount of videos in the list
                 (Default: SEARCH_LIMIT)
 
@@ -277,16 +276,10 @@ init -10 python:
         RETURNS:
             ready to use menu list for mas_gen_scrollable_menu()
         """
-        menu_list = list()
-
         if not videos_info:
-            return menu_list
+            return []
 
-        for video_data in videos_info:
-            menu_list.append((video_data[0], video_data[1], False, False))
-        # menu_list.append(("I changed my mind.", "_changed_mind", False, True))
-        # menu_list.append(("I want to find another song.", "_another_song", False, True))
-        return menu_list
+        return [(video_info[0], video_info[1], False, False) for video_info in videos_info]
 
 # # # AUDIO STUFF
 
@@ -411,23 +404,22 @@ init -10 python:
         TODO: Can I merge both functions into 1? ¯\_(ツ)_/¯
 
         IN:
-            url - a url for the data
+            url - a url to the data
             content_size - the data's size
 
         RETURNS:
             cache if we successfully downloaded it, False if got an exception
         """
         cache = b""
-        min_threshold = 0
-        max_threshold = store.ytm_globals.REQUEST_CHUNK
+        bottom_bracket = 0
+        top_bracket = store.ytm_globals.REQUEST_CHUNK
         headers = {
             "User-Agent": "Just Monika! (MAS v. %s)" % config.version,
-            "Range": "bytes=%s-%s" % (min_threshold, max_threshold)
+            "Range": "bytes=%s-%s" % (bottom_bracket, top_bracket)
         }
 
         try:
             # TODO: should have this part only once
-            # Probably will require rewriting
             req = urllib2.Request(url=url, headers=headers)
             response = urllib2.urlopen(req)
 
@@ -441,12 +433,12 @@ init -10 python:
                 cache_size = len(cache)
 
                 if (
-                    cache_size == max_threshold
+                    cache_size == top_bracket
                     and not cache_size == content_size
                 ):
-                    min_threshold = max_threshold
-                    max_threshold += store.ytm_globals.REQUEST_CHUNK
-                    headers["Range"] = "bytes=%s-%s" % (min_threshold, max_threshold)
+                    bottom_bracket = top_bracket
+                    top_bracket += store.ytm_globals.REQUEST_CHUNK
+                    headers["Range"] = "bytes=%s-%s" % (bottom_bracket, top_bracket)
                     req = urllib2.Request(url=url, headers=headers)
                     response = urllib2.urlopen(req)
 
@@ -462,20 +454,20 @@ init -10 python:
         TODO: Can I merge both functions into 1? ¯\_(ツ)_/¯
 
         IN:
-            url - a url for the data
+            url - a url to the data
             content_size - the data's size
-            directory - a directory we are going to save the cache to
+            directory - the directory we are going to save the cache to
                 NOTE: should include the file's name
 
         RETURNS:
             cache if we successfully downloaded it, False if got an exception
         """
         cache_size = 0
-        min_threshold = 0
-        max_threshold = store.ytm_globals.REQUEST_CHUNK
+        bottom_bracket = 0
+        top_bracket = store.ytm_globals.REQUEST_CHUNK
         headers = {
             "User-Agent": "Just Monika! (MAS v. %s)" % config.version,
-            "Range": "bytes=%s-%s" % (min_threshold, max_threshold)
+            "Range": "bytes=%s-%s" % (bottom_bracket, top_bracket)
         }
 
         try:
@@ -493,12 +485,12 @@ init -10 python:
                     audio_cache.write(cache_buffer)
 
                     if (
-                        cache_size == max_threshold
+                        cache_size == top_bracket
                         and not cache_size == content_size
                     ):
-                        min_threshold = max_threshold
-                        max_threshold += store.ytm_globals.REQUEST_CHUNK
-                        headers["Range"] = "bytes=%s-%s" % (min_threshold, max_threshold)
+                        bottom_bracket = top_bracket
+                        top_bracket += store.ytm_globals.REQUEST_CHUNK
+                        headers["Range"] = "bytes=%s-%s" % (bottom_bracket, top_bracket)
                         req = urllib2.Request(url = url, headers=headers)
                         response = urllib2.urlopen(req)
 
@@ -514,7 +506,7 @@ init -10 python:
 
         IN:
             _bytes - data we will write
-            directory - a directory we are going to save the cache to
+            directory - the directory we are going to save the cache to
                 NOTE: should include the file's name
 
         RETURNS:
@@ -537,7 +529,7 @@ init -10 python:
             audio - an audio file (can be a list of files too)
             clear_queue - True clears the queue and play audio, False adds to the the end
                 (Default: True)
-            channel - a RenPy channel we will play the audio in
+            channel - the RenPy audio channel we will play the audio in
                 (Default: "music")
         """
         if clear_queue:

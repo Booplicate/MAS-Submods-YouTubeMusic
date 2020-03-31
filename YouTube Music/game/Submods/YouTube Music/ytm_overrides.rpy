@@ -12,27 +12,32 @@ init 999:
     # Overrides for vanilla MAS
     if not renpy.has_label("display_music_menu_ov"):
         python:
-            def play_song(song, fadein=0.0, loop=True, set_per=False):
+            def play_song(song, fadein=0.0, loop=True, set_per=False, fadeout=0.0):
                 """
                 For docs look for the og func :P
                 """
                 ytm_flag = False
+
                 if song is None:
                     song = songs.FP_NO_SONG
-                    renpy.music.stop(channel="music")
+                    renpy.music.stop(channel="music", fadeout=fadeout)
+
                 elif song is store.songs.FP_PAUSE:
                     renpy.music.set_pause(True)
                     ytm_flag = True
+
                 elif song is store.songs.FP_UNPAUSE:
                     renpy.music.set_pause(False)
                     ytm_flag = True
+
                 else:
                     renpy.music.play(
                         song,
                         channel="music",
                         loop=loop,
                         synchro_start=True,
-                        fadein=fadein
+                        fadein=fadein,
+                        fadeout=fadeout
                     )
 
                 if not ytm_flag:
@@ -54,15 +59,18 @@ init 999:
                     mas_RaiseShield_mumu()
                     # music menu label
                     selected_track = renpy.call_in_new_context("display_music_menu")
+
                     if selected_track == songs.NO_SONG:
                         selected_track = songs.FP_NO_SONG
                     elif selected_track == songs.PAUSE:
                         selected_track = songs.FP_PAUSE
                     elif selected_track == songs.UNPAUSE:
                         selected_track = songs.FP_UNPAUSE
+
                     # workaround to handle new context
                     if selected_track != songs.current_track:
                         play_song(selected_track, set_per=True)
+
                     # unwanted interactions are no longer unwanted
                     if store.mas_globals.dlg_workflow:
                         # the dialogue workflow means we should only enable
@@ -167,15 +175,19 @@ init 999:
                     is_nightmusic - True if this is nightmusic and we should set vars accordingly (prevents crashes)
                 """
                 ytm_flag = False
+
                 if song is None:
                     song = store.songs.FP_NO_SONG
                     renpy.music.stop(channel="music")
+
                 elif song is store.songs.FP_PAUSE:
                     renpy.music.set_pause(True)
                     ytm_flag = True
+
                 elif song is store.songs.FP_UNPAUSE:
                     renpy.music.set_pause(False)
                     ytm_flag = True
+
                 elif song is store.songs.FP_NIGHTMUSIC:
                     #Run a nightmusic alg for this
                     song = store.nm_utils.pickSong(nm_utils.nightMusicStation)
@@ -213,12 +225,14 @@ init 999:
 
                     # music menu label
                     selected_track = renpy.call_in_new_context("display_music_menu_ov")
+
                     if selected_track == songs.NO_SONG:
                         selected_track = songs.FP_NO_SONG
                     elif selected_track == songs.PAUSE:
                         selected_track = songs.FP_PAUSE
                     elif selected_track == songs.UNPAUSE:
                         selected_track = songs.FP_UNPAUSE
+
                     # workaround to handle new context
                     if selected_track == songs.FP_NIGHTMUSIC:
                         #Set up the file list
