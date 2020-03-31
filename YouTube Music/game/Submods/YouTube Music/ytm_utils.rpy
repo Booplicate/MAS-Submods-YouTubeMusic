@@ -6,7 +6,7 @@ init -15 python in ytm_globals:
     has_connection = None
 
     # Maximum search results
-    SEARCH_LIMIT = 15
+    # SEARCH_LIMIT = persistent._ytm_search_limit
 
     # mas_gen_scrollable_menu() constants
     # (X, Y, W, H)
@@ -17,7 +17,7 @@ init -15 python in ytm_globals:
     MENU_ANOTHER_SONG = ("I want to find another song.", "_another_song", False, False, 0)
 
     # Maximum audio size to play from RAM (bytes)
-    AUDIO_SIZE_LIMIT = 15728640
+    # AUDIO_SIZE_LIMIT = persistent._ytm_audio_size_limit * 1048576
     # Maximum chunk size to request from yt (bytes)
     REQUEST_CHUNK = 10485760
     # Maximum chunk size for writing data (bytes)
@@ -37,7 +37,7 @@ init -15 python in ytm_globals:
     # Do we play an audio or no
     is_playing = False
 
-    # We keep cache there
+    # We keep cache here
     SHORT_MUSIC_DIRECTORY = "/Submods/YouTube Music/temp/"
     FULL_MUSIC_DIRECTORY = renpy.config.gamedir.replace("\\", "/") + SHORT_MUSIC_DIRECTORY
     # Cache extension
@@ -93,19 +93,24 @@ init -10 python:
 
 # # # URL STUFF
 
-    def ytm_isOnline():
+    def ytm_isOnline(force_update=False):
         """
         Checks if we have an internet connection
+        NOTE: checks only once per sesh!
 
         RETURNS:
             True or False
         """
         # return True
-        if store.ytm_globals.has_connection is None:
+        if (
+            force_update
+            or not store.ytm_globals.has_connection
+        ):
             try:
-                urllib2.urlopen("http://www.google.com/", timeout=15)
+                urllib2.urlopen(store.ytm_globals.YOUTUBE, timeout=15)
                 store.ytm_globals.has_connection = True
                 return store.ytm_globals.has_connection
+
             except urllib2.URLError as e:
                 ytm_writeLog("No connection.", e)
                 store.ytm_globals.has_connection = False
@@ -227,14 +232,12 @@ init -10 python:
 
 # # # VIDEO STUFF
 
-    def ytm_getSearchResults(html, limit=store.ytm_globals.SEARCH_LIMIT):
+    def ytm_getSearchResults(html):
         """
         Gets a list of search results from the html
 
         IN:
             html - the html we get videos from
-            limit - maximum amount of videos in the list
-                (Default: SEARCH_LIMIT)
 
         RETURNS:
             list with tuples (video's title, video's URL)
@@ -250,7 +253,8 @@ init -10 python:
             ytm_writeLog("Failed to parse html data. Bad encoding?", e)
             return False
 
-        i = 0
+        total = 0
+        limit = store.persistent._ytm_search_limit
         for data in bs.find_all("a", {"class":"yt-uix-tile-link yt-ui-ellipsis yt-ui-ellipsis-2 yt-uix-sessionlink spf-link"}):
             # damn youtube's mixes
             if (
@@ -260,8 +264,8 @@ init -10 python:
             ):
                 videos_info.append((sub("[\[\]\~\{\}\"\']", "", data["title"]), store.ytm_globals.YOUTUBE + data["href"]))
 
-                i += 1
-                if i == limit:
+                total += 1
+                if total >= limit:
                     break
 
         return videos_info
@@ -365,7 +369,8 @@ init -10 python:
             True if we need to cache it before playing
             False otherwise
         """
-        return True if audio_size > store.ytm_globals.AUDIO_SIZE_LIMIT else False
+        limit = persistent._ytm_audio_size_limit * 1048576
+        return True if audio_size > limit else False
 
     def ytm_findCache(audio_id):
         """
@@ -536,7 +541,7 @@ init -10 python:
             renpy.music.stop(channel, 2)
             store.songs.current_track = "YouTube Music"
             store.songs.selected_track = store.songs.FP_NO_SONG
-            persistent.current_track = store.songs.FP_NO_SONG
+            store.persistent.current_track = store.songs.FP_NO_SONG
 
         try:
             renpy.music.queue(
@@ -558,7 +563,7 @@ init -10 python:
 
         finally:
             try:
-                persistent._seen_audio.pop(audio)
+                store.persistent._seen_audio.pop(audio)
             except:
                 pass
 
@@ -620,7 +625,7 @@ init -5 python:
 
         IN:
             _bytes - data we will write
-            directory - a directory we are going to save the cache to
+            directory - the directory we are going to save the cache to
                 NOTE: should include the file's name
 
         RETURNS:
@@ -636,7 +641,7 @@ init -5 python:
         IN:
             url - a url we will download from
             content_size - the data's size
-            directory - a directory we are going to save the cache to
+            directory - the directory we are going to save the cache to
                 NOTE: should include the file's name
 
         RETURNS:
@@ -668,7 +673,7 @@ init -5 python:
         regardless of if it's ready or not
 
         IN:
-            thread - a thread we reset
+            thread - the thread we reset
         """
         thread._th_result = None
         thread._th_done = True

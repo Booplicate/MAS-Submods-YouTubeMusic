@@ -3,6 +3,7 @@
 init 999:
     # General overrides
     # $ config.label_overrides["_quit"] = "_quit_override" < for lulz
+    # TODO: replace with 'mas_submod_utils'
     $ submod_utils.registerFunction("quit", ytm_cleanUp)
     $ store.songs.PAUSE = "Pause"
     $ store.songs.UNPAUSE = "Play"

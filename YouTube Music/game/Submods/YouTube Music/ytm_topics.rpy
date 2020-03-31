@@ -134,7 +134,7 @@ label ytm_monika_find_music(skip_check=False):
 
                     else:
                         # aka the part you will never get to
-                        m 2tfu "Reading this doesn't seem like the best use of your time, [player].{nw}"
+                        m 2tfu "{cps=*2}Reading this doesn't seem like the best use of your time, [player].{/cps}{nw}"
                         $ _history_list.pop()
                         $ ready = True
 
