@@ -105,6 +105,24 @@ label ytm_monika_find_music(skip_check=False):
 
         else:
             if ytm_isYouTubeURL(raw_search_request):
+                # if ytm_isPlaylistURL(raw_search_request):
+                #     m "Would you like me to shuffle the playlist?{nw}"
+                #     $ _history_list.pop()
+                #     menu:
+                #         m "Would you like me to shuffle the playlist?{fast}"
+
+                #         "Yes.":
+                #             $ _shuffle = True
+
+                #         "No.":
+                #             $ _shuffle = False
+
+                #     m "Alright, just give me a second..."
+                #     # TODO: do stuff in thread here and then play the first audio
+                #     $ del[_shuffle]
+                #     call .ytm_process_audio_info(store.ytm_globals.playlist[current_song_from_playlist])
+
+                # else:
                 show monika 1dsa at t11
                 call .ytm_process_audio_info(raw_search_request)
 

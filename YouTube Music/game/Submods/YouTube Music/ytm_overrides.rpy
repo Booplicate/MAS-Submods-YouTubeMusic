@@ -163,7 +163,7 @@ init 999:
     # Special overrides for Night Music
     else:
         python:
-            def play_song(song, fadein=0.0, loop=True, set_per=False, if_changed=True, is_nightmusic=False):
+            def play_song(song, fadein=0.0, loop=True, set_per=False, if_changed=True, is_nightmusic=False, fadeout=0.0):
                 """
                 Literally just plays a song onto the music channel
                 Also sets the current track
@@ -174,12 +174,13 @@ init 999:
                     set_per - True if we should set persistent track, False if not
                     if_changed - True if we should change if the song is different, False otherwise (default True)
                     is_nightmusic - True if this is nightmusic and we should set vars accordingly (prevents crashes)
+                    fadeout - Amount of time it takes to fade out a track (if you play None)
                 """
                 ytm_flag = False
 
                 if song is None:
                     song = store.songs.FP_NO_SONG
-                    renpy.music.stop(channel="music")
+                    renpy.music.stop(channel="music", fadeout=fadeout)
 
                 elif song is store.songs.FP_PAUSE:
                     renpy.music.set_pause(True)
@@ -202,6 +203,7 @@ init 999:
                         loop=loop,
                         synchro_start=True,
                         fadein=fadein,
+                        fadeout=fadeout,
                         if_changed=if_changed
                     )
 

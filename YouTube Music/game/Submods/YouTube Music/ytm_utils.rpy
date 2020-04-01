@@ -6,7 +6,7 @@ init -15 python in ytm_globals:
     has_connection = None
 
     # Maximum search results
-    # SEARCH_LIMIT = persistent._ytm_search_limit
+    SEARCH_LIMIT = 15
 
     # mas_gen_scrollable_menu() constants
     # (X, Y, W, H)
@@ -17,7 +17,7 @@ init -15 python in ytm_globals:
     MENU_ANOTHER_SONG = ("I want to find another song.", "_another_song", False, False, 0)
 
     # Maximum audio size to play from RAM (bytes)
-    # AUDIO_SIZE_LIMIT = persistent._ytm_audio_size_limit * 1048576
+    AUDIO_SIZE_LIMIT = 15 * 1048576
     # Maximum chunk size to request from yt (bytes)
     REQUEST_CHUNK = 10485760
     # Maximum chunk size for writing data (bytes)
@@ -36,6 +36,10 @@ init -15 python in ytm_globals:
     audio_to_queue = ""
     # Do we play an audio or no
     is_playing = False
+    # all videos URLs from the playlist we're currently listening to
+    playlist = []
+    # id of the current track from the playlist
+    current_song_from_playlist = 0
 
     # We keep cache here
     SHORT_MUSIC_DIRECTORY = "/Submods/YouTube Music/temp/"
@@ -99,7 +103,8 @@ init -10 python:
         NOTE: checks only once per sesh!
 
         RETURNS:
-            True or False
+            True if we do,
+            False otherwise
         """
         # return True
         if (
@@ -122,14 +127,34 @@ init -10 python:
     def ytm_isYouTubeURL(string):
         """
         Checks if the given string is a YouTube URL
+        TODO: more checks to make sure the user gave a usable url
 
         IN:
             string - a string to check
 
         RETURNS:
-            True if it's a YouTube URL, False if it is not
+            True if it's a YouTube URL,
+            False if it is not
         """
         if "/www.youtube.com/" in string or "/youtu.be/" in string:
+            return True
+        return False
+
+    def ytm_isPlaylistURL(string):
+        """
+        Checks if the given string is a URL to a playlist
+
+        IN:
+            string - a string to check
+
+        ASSUMES:
+            we checked the string in ytm_isYouTubeURL
+
+        RETURNS:
+            True if it's a URL to a playlist,
+            False otherwise
+        """
+        if "list=" in string:
             return True
         return False
 
@@ -141,7 +166,8 @@ init -10 python:
             string - a string to check
 
         RETURNS:
-            True if safe URL, False otherwise
+            True if safe URL,
+            False otherwise
         """
         return True if "https://" in string else False
 
@@ -254,7 +280,8 @@ init -10 python:
             return False
 
         total = 0
-        limit = store.persistent._ytm_search_limit
+        # limit = store.persistent._ytm_search_limit
+        limit = store.ytm_globals.SEARCH_LIMIT
         for data in bs.find_all("a", {"class":"yt-uix-tile-link yt-ui-ellipsis yt-ui-ellipsis-2 yt-uix-sessionlink spf-link"}):
             # damn youtube's mixes
             if (
@@ -284,6 +311,36 @@ init -10 python:
             return []
 
         return [(video_info[0], video_info[1], False, False) for video_info in videos_info]
+
+    def ytm_getVideosFromPlaylist(url):
+        """
+        Gets a list of videos in a playlist from the given URL
+        NOTE: I'm not sure, but this might be limited
+            to 200 videos only by youtube
+
+        IN:
+            url - a url to a playlist
+
+        RETURNS:
+            list with videos URLs from the playlist
+        """
+        # we need a direct url to the playlist
+        if "/playlist?" not in url:
+            url = re.sub(r"watch\?v=([-_0-9a-zA-Z]{11})\&", "playlist?", url)
+
+        # get the html
+        dirty_html = ytm_requestHTML(url)
+        if not dirty_html:
+            return []
+
+        html = ytm_clearHTML(dirty_html)
+
+        # define the pattern
+        pattern = re.compile(r'"playlistVideoRenderer":\{"videoId":"([-_0-9a-zA-Z]{11})","thumbnail"')
+        # look for videos ids in the html by the pattern
+        ids_list = re.findall(pattern, html)
+        # use list compr to turn ids into urls
+        return [store.ytm_globals.YOUTUBE + "watch?v=" + id for id in ids_list]
 
 # # # AUDIO STUFF
 
@@ -315,7 +372,6 @@ init -10 python:
             ytm_writeLog("Failed to request XML data.", e)
             return False
 
-        # return re.split('</BaseURL>', re.split('<BaseURL>', re.split('codecs="opus"', xml, 1)[-1], 1)[-1], 1)[0]
         return xml.split('codecs="opus"', 1)[1].split("<BaseURL>", 1)[1].split("</BaseURL>")[0]
 
     def ytm_getAudioInfo(url):
@@ -369,7 +425,8 @@ init -10 python:
             True if we need to cache it before playing
             False otherwise
         """
-        limit = persistent._ytm_audio_size_limit * 1048576
+        # limit = persistent._ytm_audio_size_limit * 1048576
+        limit = store.ytm_globals.AUDIO_SIZE_LIMIT
         return True if audio_size > limit else False
 
     def ytm_findCache(audio_id):
