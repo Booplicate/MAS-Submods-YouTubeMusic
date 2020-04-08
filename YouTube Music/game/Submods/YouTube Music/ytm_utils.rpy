@@ -36,10 +36,20 @@ init -15 python in ytm_globals:
     audio_to_queue = ""
     # Do we play an audio or no
     is_playing = False
-    # all videos URLs from the playlist we're currently listening to
+    # list of video_id of the current playlist
     playlist = []
-    # id of the current track from the playlist
-    current_song_from_playlist = 0
+    # audios that we need to queue
+    audios_to_queue = list()
+    # set of audios that were played at least once
+    played_audio = list()
+    # last audio that we queued
+    last_queued_audio = None
+    # how much songs should be played before we queue the next one
+    queue_next_audio_in = 2
+    # IDEAS:
+    # save a name of song after which we will d/l the next
+    # make my own queue
+
 
     # We keep cache here
     SHORT_MUSIC_DIRECTORY = "/Submods/YouTube Music/temp/"
@@ -55,6 +65,10 @@ init -10 python:
     from bs4 import BeautifulSoup
     from bs4 import UnicodeDammit
     from HTMLParser import HTMLParser
+
+    played_audio = 0
+    failed_audio = 0
+    callbacked = 0
 
 # # # UTIL STUFF
 
@@ -241,16 +255,16 @@ init -10 python:
 
         return html
 
-    def ytm_clearHTML(html):
+    def ytm_cleanHTML(html):
         """
-        Tries to clear html up from weird symbol and encodings
+        Tries to clean html up from weird symbol and encodings
         NOTE: Won't rise exceptions even if it fails.
 
         IN:
-            html - dirty html data that we're clearing
+            html - dirty html data that we're cleaning
 
         RETURNS:
-            potentially clear html data
+            potentially clean html data
         """
         html_parser = HTMLParser()
 
@@ -274,7 +288,7 @@ init -10 python:
             return videos_info
 
         try:
-            bs = BeautifulSoup(ytm_clearHTML(html), "html.parser")
+            soup = BeautifulSoup(ytm_cleanHTML(html), "html.parser")
         except Exception as e:
             ytm_writeLog("Failed to parse html data. Bad encoding?", e)
             return False
@@ -282,7 +296,7 @@ init -10 python:
         total = 0
         # limit = store.persistent._ytm_search_limit
         limit = store.ytm_globals.SEARCH_LIMIT
-        for data in bs.find_all("a", {"class":"yt-uix-tile-link yt-ui-ellipsis yt-ui-ellipsis-2 yt-uix-sessionlink spf-link"}):
+        for data in soup.find_all("a", {"class":"yt-uix-tile-link yt-ui-ellipsis yt-ui-ellipsis-2 yt-uix-sessionlink spf-link"}):
             # damn youtube's mixes
             if (
                 not "&list=" in data["href"]
@@ -312,35 +326,55 @@ init -10 python:
 
         return [(video_info[0], video_info[1], False, False) for video_info in videos_info]
 
-    def ytm_getVideosFromPlaylist(url):
+    def ytm_getVideosFromPlaylist(url, shuffle=False):
         """
         Gets a list of videos in a playlist from the given URL
         NOTE: I'm not sure, but this might be limited
-            to 200 videos only by youtube
+            to 200 videos by youtube
 
         IN:
             url - a url to a playlist
+            shuffle - whether or not we want to shuffle the playlist
 
         RETURNS:
             list with videos URLs from the playlist
         """
         # we need a direct url to the playlist
-        if "/playlist?" not in url:
-            url = re.sub(r"watch\?v=([-_0-9a-zA-Z]{11})\&", "playlist?", url)
+        # if "/playlist?" not in url:
+        #     if "watch?v=" not in url:
+        #         return []
+
+        #     url = re.sub(r"watch\?v=([-_0-9a-zA-Z]{11})\&", "playlist?", url)
 
         # get the html
-        dirty_html = ytm_requestHTML(url)
-        if not dirty_html:
-            return []
+        playlist = list()
 
-        html = ytm_clearHTML(dirty_html)
+        html = ytm_requestHTML(url)
+        if not html:
+            return playlist
 
-        # define the pattern
-        pattern = re.compile(r'"playlistVideoRenderer":\{"videoId":"([-_0-9a-zA-Z]{11})","thumbnail"')
+        try:
+            soup = BeautifulSoup(ytm_cleanHTML(html), "html.parser")
+        except Exception as e:
+            ytm_writeLog("Failed to parse html data. Bad encoding?", e)
+            return playlist
+
+        for data in soup.find_all("a", {"class":"pl-video-title-link yt-uix-tile-link yt-uix-sessionlink spf-link"}):
+            # fetch the data we needed and add the youtube.com bit
+            link = store.ytm_globals.YOUTUBE + data["href"].split("&list=")[0]
+            playlist.append(link)
+
+        # html = ytm_cleanHTML(dirty_html)
+        # pattern = re.compile(r'"playlistVideoRenderer":\{"videoId":"([-_0-9a-zA-Z]{11})","thumbnail"')
+
         # look for videos ids in the html by the pattern
-        ids_list = re.findall(pattern, html)
+        # ids_list = re.findall(pattern, html)
         # use list compr to turn ids into urls
-        return [store.ytm_globals.YOUTUBE + "watch?v=" + id for id in ids_list]
+        # urls_list = [store.ytm_globals.YOUTUBE + "watch?v=" + id for id in ids_list]
+        if shuffle:
+            renpy.random.shuffle(playlist)
+
+        return playlist
 
 # # # AUDIO STUFF
 
@@ -583,7 +617,7 @@ init -10 python:
 
         return True
 
-    def ytm_playAudio(audio, clear_queue=True, channel="music"):
+    def ytm_playAudio(audio, clear_queue=True, callback=None, channel="music"):
         """
         Plays audio files/data
 
@@ -591,14 +625,34 @@ init -10 python:
             audio - an audio file (can be a list of files too)
             clear_queue - True clears the queue and play audio, False adds to the the end
                 (Default: True)
+            callback - callback when we have no audio in the queue
+                (Default: None)
             channel - the RenPy audio channel we will play the audio in
                 (Default: "music")
         """
-        if clear_queue:
+        if (
+            clear_queue
+            # or (
+            #     not renpy.music.get_playing(channel)
+            #     and not store.ytm_globals.is_playing
+            # )
+        ):
             renpy.music.stop(channel, 2)
-            store.songs.current_track = "YouTube Music"
             store.songs.selected_track = store.songs.FP_NO_SONG
             store.persistent.current_track = store.songs.FP_NO_SONG
+        store.songs.current_track = "YouTube Music"
+
+        renpy.music.set_queue_empty_callback(callback, channel)
+        # renpy.invoke_in_new_context(
+        #     renpy.say,
+        #     m,
+        #     "playAudio() 1: {0}".format(renpy.audio.audio.get_channel("music").loop).replace("[", "[[")
+        # )
+
+        if clear_queue:
+            fadein = 2
+        else:
+            fadein = 0
 
         try:
             renpy.music.queue(
@@ -606,9 +660,14 @@ init -10 python:
                 channel=channel,
                 loop=True,
                 clear_queue=clear_queue,
-                fadein=2,
+                fadein=fadein,
                 tight=False
             )
+            # renpy.invoke_in_new_context(
+            #     renpy.say,
+            #     m,
+            #     "playAudio() 2: {0}".format(renpy.audio.audio.get_channel("music").loop).replace("[", "[[")
+            # )
 
         except Exception as e:
             ytm_writeLog("Failed to play audio.", e)
@@ -624,8 +683,154 @@ init -10 python:
             except:
                 pass
 
-        # TODO: take a look at
-        # renpy.music.set_queue_empty_callback
+    def ytm_setCallback(callback, channel="music"):
+        """
+        """
+        renpy.music.set_queue_empty_callback(callback, channel)
+
+    def ytm_addToQueue(audio, channel="music"):
+        c = renpy.audio.audio.get_channel("music")
+        if not c:
+            return
+        # no booplicates allowed
+        if audio not in c.loop:
+            c.loop.append(audio)
+
+        if audio not in c.queue:
+            # curr_playing_song = renpy.music.get_playing(channel=channel)
+            last_queued_audio = store.ytm_globals.last_queued_audio
+            qe = renpy.audio.audio.QueueEntry(audio, 0, False, False)
+
+            # if (
+            #     curr_playing_song is not None
+            #     and c.queue[-1].filename == curr_playing_song
+            # ):
+            #     c.queue.insert(0, qe)
+
+            if (
+                last_queued_audio is not None
+                and last_queued_audio not in store.ytm_globals.played_audio
+            ):
+                lqa_id = 0
+                # queued_audio = [qe.filename for qe in c.queue]
+                # lqa_id = queued_audio.index(last_queued_audio)
+                for id, qe in enumerate(c.queue):
+                    if qe.filename == last_queued_audio:
+                        lqa_id = id
+                        break
+                c.queue.insert(id + 1, qe)
+
+            # elif (
+            #     last_queued_audio is not None
+            #     and last_queued_audio in store.ytm_globals.played_audio
+            # ):
+            #     c.queue.insert(0, qe)
+
+            else:
+                # c.queue.append(qe)
+                c.queue.insert(0, qe)
+
+            last_queued_audio = audio
+
+    def ytm_playAudioFromPlaylist():
+        """
+        ASSUMES:
+            ytm_globals.playlist
+            "Submods/audio_.mp3"
+
+        RETURNS:
+            True if successfully queued an audio,
+            False if no audio was queued
+        """
+        while store.ytm_globals.playlist:
+            video_id = store.ytm_globals.playlist[0]
+            audio_info = ytm_getAudioInfo(video_id)
+            # got an error? pop and try next one
+            if not audio_info:
+                store.failed_audio += 1
+                store.ytm_globals.playlist.pop(0)
+                continue
+
+            directory = store.ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["ID"] + store.ytm_globals.EXTENSION
+            cache = ytm_cacheData_Disk(audio_info["URL"], audio_info["SIZE"], directory)
+            if not cache:
+                store.failed_audio += 1
+                store.ytm_globals.playlist.pop(0)
+                continue
+
+            audio = directory.split(renpy.config.gamedir.replace("\\", "/"), 1)[1]
+            channel = renpy.audio.audio.get_channel("music")
+            old_loop = channel.loop
+            success = ytm_playAudio(audio, clear_queue=False, callback=ytm_audioCallback)
+            # if we successefully played an audio, break the loop and remove that audio from the playlist
+            if success:
+                # channel = renpy.audio.audio.get_channel("music")
+                # new_loop = list(frozenset(channel.loop + [queue_entry.filename for queue_entry in channel.queue]))
+                # channel.loop = new_loop
+                channel.loop = old_loop.append(audio)
+
+                store.played_audio += 1
+                store.ytm_globals.playlist.pop(0)
+                return True
+        return False
+
+    def ytm_test():
+        """
+        store.ytm_globals.playlist = [
+            "Submods/audio_1.mp3",
+            "Submods/audio_2.mp3",
+            "Submods/audio_3.mp3"
+        ]
+        """
+
+        while store.ytm_globals.playlist:
+            audio = store.ytm_globals.playlist[0]
+            success = ytm_playAudio(audio, clear_queue=False, callback=test_callback)
+            store.ytm_globals.playlist.pop(0)
+
+            if success:
+                return True
+        return False
+
+    def test_callback():
+        queued_songs = len(renpy.audio.audio.get_channel("music").queue)
+        if queued_songs < 2:
+            ytm_test()
+        if not store.ytm_globals.playlist:
+            renpy.music.set_queue_empty_callback(None, "music")
+
+    def new_callback():
+        store.callbacked += 1
+        curr_song = renpy.music.get_playing(channel="music")
+        if (
+            curr_song is not None
+            and curr_song not in store.ytm_globals.played_audio
+        ):
+            store.ytm_globals.played_audio.append(curr_song)
+            store.ytm_globals.queue_next_audio_in -= 1
+
+        if (
+            store.ytm_globals.queue_next_audio_in == 0
+            and store.ytm_globals.audios_to_queue
+        ):
+            # queue the enxt audio here
+            pass
+
+        if not store.ytm_globals.audios_to_queue:
+            ytm_setCallback(None)
+
+    def ytm_audioCallback():
+        """
+        Callback that will queue the next song for us
+        """
+        queued_songs = len(renpy.audio.audio.get_channel("music").queue)
+        if queued_songs < 2:
+            store.callbacked += 1
+            # try to queue the next song
+            ytm_playAudioFromPlaylist()
+
+        if not store.ytm_globals.playlist:
+            renpy.music.set_queue_empty_callback(None, "music")
 
 # # # THREADING STUFF
 
@@ -659,7 +864,7 @@ init -5 python:
             False if got an exception
         """
         cache = ytm_cacheData_RAM(url, audio_size)
-        if cache and ytm_playAudio(ytm_bytesToAudioData(cache, "YouTubeID: "+video_id), clear_queue):
+        if cache and ytm_playAudio(ytm_bytesToAudioData(cache, "YouTubeID: "+video_id), clear_queue=clear_queue):
                 return cache
         # got an exception somewhere
         return False
@@ -714,6 +919,34 @@ init -5 python:
         # got an exception somewhere
         return False
 
+    def __ytm_th_PlayPlaylist(url, shuffle=False):
+        """
+        Handles the playlist from the given URL
+        1. Gets all videos
+        2. Shuffles if needed
+        3. Tries to play the first audio from the playlist
+        4. Sets audio callback
+
+        IN:
+            url - a url to a playlist
+            shuffle - whether or not we want to shuffle the playlist
+
+        RETURNS:
+            True if we successefully queued at least 1 audio,
+            False if we failed to queued the playlist
+        """
+        playlist = ytm_getVideosFromPlaylist(url, shuffle)
+        if not playlist:
+            return False
+
+        store.ytm_globals.playlist = playlist
+
+        success = ytm_playAudioFromPlaylist()
+
+        if success:
+            return True
+        return False
+
     def ytm_updateThreadArgs(thread, args):
         """
         Sets new args for the thread
@@ -739,5 +972,6 @@ init -5 python:
     ytm_search_music = mas_threading.MASAsyncWrapper(__ytm_th_Search)
     ytm_get_audio_info = mas_threading.MASAsyncWrapper(__ytm_th_GetAudioInfo)
     ytm_play_audio = mas_threading.MASAsyncWrapper(__ytm_th_PlayAudio)
+    ytm_play_playlist = mas_threading.MASAsyncWrapper(__ytm_th_PlayPlaylist)
     ytm_cache_audio_from_ram = mas_threading.MASAsyncWrapper(__ytm_th_CacheFromRAM)
     ytm_cache_audio_from_url = mas_threading.MASAsyncWrapper(__ytm_th_CacheFromURL)

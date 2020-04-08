@@ -15,7 +15,6 @@ label ytm_monika_introduction:
     m 3eua "I've noticed you changed the game's code,{w=0.5} {nw}"
     extend 3hub "It looks like we can listen to music directly from YouTube now!"
     m 1esa "I just need the name of the song that you want to listen to."
-    # playlists support wen (soon:tm:)
     m 3eua "You could also give me the link if you've found it already."
 
     if ytm_isOnline():
@@ -105,26 +104,44 @@ label ytm_monika_find_music(skip_check=False):
 
         else:
             if ytm_isYouTubeURL(raw_search_request):
-                # if ytm_isPlaylistURL(raw_search_request):
-                #     m "Would you like me to shuffle the playlist?{nw}"
-                #     $ _history_list.pop()
-                #     menu:
-                #         m "Would you like me to shuffle the playlist?{fast}"
+                if ytm_isPlaylistURL(raw_search_request):
+                    pause 0.25
+                    m "Would you like me to shuffle that playlist?{nw}"
+                    $ _history_list.pop()
+                    menu:
+                        m "Would you like me to shuffle that playlist?{fast}"
 
-                #         "Yes.":
-                #             $ _shuffle = True
+                        "Yes.":
+                            $ should_shuffle = True
 
-                #         "No.":
-                #             $ _shuffle = False
+                        "No.":
+                            $ should_shuffle = False
 
-                #     m "Alright, just give me a second..."
-                #     # TODO: do stuff in thread here and then play the first audio
-                #     $ del[_shuffle]
-                #     call .ytm_process_audio_info(store.ytm_globals.playlist[current_song_from_playlist])
+                    $ ytm_updateThreadArgs(ytm_play_playlist, [raw_search_request, should_shuffle])
+                    call ytm_play_playlist_loop
+                    $ del[should_shuffle]
 
-                # else:
-                show monika 1dsa at t11
-                call .ytm_process_audio_info(raw_search_request)
+                    if _return:
+                        m "Let's enjoy our time together~"
+                        $ ready = True
+
+                    else:
+                        m "Hmm... {w=0.4}I'm sorry, [player]. I can't play that playlist right now."
+                        m "Would you like to find something else to listen?{nw}"
+                        $ _history_list.pop()
+                        menu:
+                            m "Would you like to find something else to listen?{fast}"
+
+                            "Yes.":
+                                pass
+
+                            "No.":
+                                $ ready = True
+
+                else:
+                    # show monika 1dsa at t11
+                    call .ytm_process_audio_info(raw_search_request)
+                    $ ready = True
 
             else:
                 m 1dsa "Let me see what I can find.{w=0.5}{nw}"
@@ -240,7 +257,7 @@ label .ytm_process_audio_info(url):
         m 1ekc "I can't play this song right now."
         m 1eka "Let's try again later, okay?"
 
-    $ ready = True
+    # $ ready = True
     $ del[audio_info]
     return
 
@@ -345,3 +362,27 @@ label ytm_play_audio_loop:
         m "Let me just play that for us...{fast}{nw}"
         $ store.ytm_globals.first_pass = True
         return ytm_play_audio.get()
+
+label ytm_play_playlist_loop:
+    if store.ytm_globals.first_pass:
+        $ ellipsis_count = 1
+        $ store.ytm_globals.first_pass = False
+        $ ytm_play_playlist.start()
+
+    if not ytm_play_playlist.done():
+        if ellipsis_count == 3:
+            $ _history_list.pop()
+            m "Alright, just give me a second.{fast}{w=0.5}{nw}"
+            $ ellipsis_count = 1
+
+        else:
+            $ ellipsis_count += 1
+            extend ".{nw}"
+
+        jump ytm_play_playlist_loop
+
+    else:
+        $ _history_list.pop()
+        m "Alright, just give me a second...{fast}{nw}"
+        $ store.ytm_globals.first_pass = True
+        return ytm_play_playlist.get()
