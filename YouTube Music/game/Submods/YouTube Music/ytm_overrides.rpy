@@ -11,7 +11,10 @@ init 999:
     $ store.songs.FP_UNPAUSE = "unpause"
 
     # Overrides for vanilla MAS
-    if not renpy.has_label("display_music_menu_ov"):
+    if (
+        not renpy.has_label("display_music_menu_ov")
+        # or not mas_submod_utils.isSubmodInstalled("Night Music")
+    ):
         python:
             def play_song(song, fadein=0.0, loop=True, set_per=False, fadeout=0.0):
                 """
