@@ -2,21 +2,16 @@
 # Overrides
 init 999:
     # General overrides
-    # $ config.label_overrides["_quit"] = "_quit_override" < for lulz
-    # TODO: replace with 'mas_submod_utils'
-    $ submod_utils.registerFunction("quit", ytm_cleanUp)
+    $ store.mas_submod_utils.registerFunction("quit", ytm_cleanUp)
     $ store.songs.PAUSE = "Pause"
     $ store.songs.UNPAUSE = "Play"
     $ store.songs.FP_PAUSE = "pause"
     $ store.songs.FP_UNPAUSE = "unpause"
 
     # Overrides for vanilla MAS
-    if (
-        not renpy.has_label("display_music_menu_ov")
-        # or not mas_submod_utils.isSubmodInstalled("Night Music")
-    ):
+    if not store.mas_submod_utils.isSubmodInstalled("Nightmusic"):
         python:
-            def play_song(song, fadein=0.0, loop=True, set_per=False, fadeout=0.0):
+            def play_song(song, fadein=0.0, loop=True, set_per=False, fadeout=0.0, **kwargs):
                 """
                 For docs look for the og func :P
                 """
@@ -53,7 +48,7 @@ init 999:
                     if set_per:
                         persistent.current_track = song
 
-            def select_music():
+            def select_music(**kwargs):
                 """
                 No docs for this one tho
                 """
@@ -163,10 +158,10 @@ init 999:
 
             label "Music Menu"
 
-    # Special overrides for Night Music
+    # Special overrides for Nightmusic
     else:
         python:
-            def play_song(song, fadein=0.0, loop=True, set_per=False, if_changed=True, is_nightmusic=False, fadeout=0.0):
+            def play_song(song, fadein=0.0, loop=True, set_per=False, if_changed=True, is_nightmusic=False, fadeout=0.0, **kwargs):
                 """
                 Literally just plays a song onto the music channel
                 Also sets the current track
@@ -222,7 +217,7 @@ init 999:
                     if set_per:
                         persistent.current_track = song
 
-            def select_music():
+            def select_music(**kwargs):
                 # check for open menu
                 if songs.enabled and not songs.menu_open:
 

@@ -32,8 +32,8 @@ init -15 python in ytm_globals:
 
     # Did we just start a loop or we're continuing looping?
     first_pass = True
-    # A path to the audio that we need to queue
-    audio_to_queue = ""
+    # a dict with the title and path to the audio we need to queue
+    audio_to_queue = {"TITLE": "", "PATH": ""}
     # Do we play an audio or no
     is_playing = False
     # all videos URLs from the playlist we're currently listening to
@@ -114,15 +114,12 @@ init -10 python:
             try:
                 urllib2.urlopen(store.ytm_globals.YOUTUBE, timeout=15)
                 store.ytm_globals.has_connection = True
-                return store.ytm_globals.has_connection
 
             except urllib2.URLError as e:
                 ytm_writeLog("No connection.", e)
                 store.ytm_globals.has_connection = False
-                return store.ytm_globals.has_connection
 
-        else:
-            return store.ytm_globals.has_connection
+        return store.ytm_globals.has_connection
 
     def ytm_isYouTubeURL(string):
         """
@@ -583,12 +580,14 @@ init -10 python:
 
         return True
 
-    def ytm_playAudio(audio, clear_queue=True, channel="music"):
+    def ytm_playAudio(audio, name=None, clear_queue=True, channel="music"):
         """
         Plays audio files/data
 
         IN:
             audio - an audio file (can be a list of files too)
+            name - the name of the audio. If None, 'YouTube Music' will be used
+                (Default: None)
             clear_queue - True clears the queue and play audio, False adds to the the end
                 (Default: True)
             channel - the RenPy audio channel we will play the audio in
@@ -596,7 +595,10 @@ init -10 python:
         """
         if clear_queue:
             renpy.music.stop(channel, 2)
-            store.songs.current_track = "YouTube Music"
+            if name is not None:
+                store.songs.current_track = name
+            else:
+                store.songs.current_track = "YouTube Music"
             store.songs.selected_track = store.songs.FP_NO_SONG
             store.persistent.current_track = store.songs.FP_NO_SONG
 
@@ -624,9 +626,6 @@ init -10 python:
             except:
                 pass
 
-        # TODO: take a look at
-        # renpy.music.set_queue_empty_callback
-
 # # # THREADING STUFF
 
 init -5 python:
@@ -637,20 +636,21 @@ init -5 python:
         A func we use in threading to get search results
 
         IN:
-            raw_search_request - raw user's search request
+            raw_search_request - the user's search request
 
         RETURNS:
             videos data
         """
         return ytm_getSearchResults(ytm_requestHTML(ytm_toSearchURL(raw_search_request)))
 
-    def __ytm_th_PlayAudio(url, video_id, audio_size, clear_queue):
+    def __ytm_th_PlayAudio(url, video_id, video_title, audio_size, clear_queue):
         """
         Caches small audio and plays it in thread
 
         IN:
             url - a url to that audio
             video_id - the video's id
+            video_title - the video's title
             audio_size - size of the audio
             clear_queue - should we clear the queue or not
 
@@ -659,7 +659,11 @@ init -5 python:
             False if got an exception
         """
         cache = ytm_cacheData_RAM(url, audio_size)
-        if cache and ytm_playAudio(ytm_bytesToAudioData(cache, "YouTubeID: "+video_id), clear_queue):
+        if cache:
+            audio = ytm_bytesToAudioData(cache, "YouTubeID: " + video_id)
+            is_playing_audio = ytm_playAudio(audio, name=video_title, clear_queue=clear_queue)
+
+            if is_playing_audio:
                 return cache
         # got an exception somewhere
         return False
@@ -669,7 +673,7 @@ init -5 python:
         Runs ytm_getAudioInfo() in thread for better performance
 
         IN:
-            url - a url we will get data from
+            url - the url we will get data from
 
         RETURNS:
             dict with various data (check ytm_getAudioInfo() for more info)
@@ -690,13 +694,14 @@ init -5 python:
         """
         return ytm_cacheFromRAM(_bytes, directory)
 
-    def __ytm_th_CacheFromURL(url, content_size, directory):
+    def __ytm_th_CacheFromURL(url, title, content_size, directory):
         """
         Runs ytm_cacheData_Disk() in thread, after downloading the cache
         will push an event so [player] will know we're good
 
         IN:
             url - a url we will download from
+            title - the video's title
             content_size - the data's size
             directory - the directory we are going to save the cache to
                 NOTE: should include the file's name
@@ -707,8 +712,9 @@ init -5 python:
         """
         cache = ytm_cacheData_Disk(url, content_size, directory)
         if cache:
+            store.ytm_globals.audio_to_queue["TITLE"] = title
             # NOTE: The Play function uses short paths so we need to cut a part of the path here
-            store.ytm_globals.audio_to_queue = directory.split(renpy.config.gamedir.replace("\\", "/"), 1)[1]
+            store.ytm_globals.audio_to_queue["PATH"] = directory.split(renpy.config.gamedir.replace("\\", "/"), 1)[1]
             pushEvent("ytm_monika_finished_caching_audio")
             return True
         # got an exception somewhere

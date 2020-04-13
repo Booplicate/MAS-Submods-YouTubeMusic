@@ -59,7 +59,8 @@ init 5 python:
 label ytm_monika_find_music(skip_check=False):
     if not skip_check:
         if ytm_isOnline():
-            m 1eub "Of course!"
+            if not store.ytm_globals.is_playing:
+                m 1eub "Of course!"
         else:
             m 1rksdla "..."
             m 1rksdlb "We need an internet connection to listen to music online, [player]..."
@@ -99,8 +100,8 @@ label ytm_monika_find_music(skip_check=False):
                 extend 1rksdlb "You have to pick a song!"
 
             else:
-                m 2dfu "{i}*sigh*{/i}"
-                m 2efb "Stop teasing me, [player]!"
+                m 2dsu ".{w=0.2}.{w=0.2}.{w=0.2}"
+                m 2tsb "[player], stop teasing me!"
                 $ ready = True
 
         else:
@@ -127,7 +128,23 @@ label ytm_monika_find_music(skip_check=False):
                 call .ytm_process_audio_info(raw_search_request)
 
             else:
+                # Since I don't have plans to expand this, I'll leave it as is
+                if (
+                    not renpy.seen_label("ytm_monika_find_music.reaction_your_reality")
+                    and "your reality" in lower_search_request
+                ):
+                    label .reaction_your_reality:
+                        m 3hua "Good choice, [player]~"
+
+                elif (
+                    not renpy.seen_label("ytm_monika_find_music.reaction_ily")
+                    and "i love you" in lower_search_request
+                ):
+                    label .reaction_ily:
+                        m 1hua "I love you too! Ehehe~"
+
                 m 1dsa "Let me see what I can find.{w=0.5}{nw}"
+
                 $ ytm_updateThreadArgs(ytm_search_music, [raw_search_request])
                 call ytm_search_loop
                 $ menu_list = ytm_buildMenuList(_return)
@@ -189,7 +206,7 @@ label .ytm_process_audio_info(url):
         if ytm_findCache(audio_info["ID"]):
             m 1dsa "Let me play that for us.{w=.5}.{w=.5}.{nw}"
 
-            if ytm_playAudio(store.ytm_globals.SHORT_MUSIC_DIRECTORY + audio_info["ID"] + store.ytm_globals.EXTENSION):
+            if ytm_playAudio(store.ytm_globals.SHORT_MUSIC_DIRECTORY + audio_info["ID"] + store.ytm_globals.EXTENSION, name=audio_info["TITLE"]):
                 m 1hua "There we go!"
                 # m "Playing it w/o downloading again! Good job, [player]!"
             else:
@@ -207,6 +224,7 @@ label .ytm_process_audio_info(url):
                     ytm_cache_audio_from_url,
                     [
                         audio_info["URL"],
+                        audio_info["TITLE"],
                         audio_info["SIZE"],
                         store.ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["ID"] + store.ytm_globals.EXTENSION
                     ]
@@ -217,7 +235,7 @@ label .ytm_process_audio_info(url):
                 m 1dsa "Let me just play that for us.{w=0.5}{nw}"
                 $ ytm_updateThreadArgs(
                     ytm_play_audio,
-                    [audio_info["URL"], audio_info["ID"], audio_info["SIZE"], True]
+                    [audio_info["URL"], audio_info["ID"], audio_info["TITLE"], audio_info["SIZE"], True]
                 )
                 call ytm_play_audio_loop
 
@@ -258,12 +276,12 @@ label ytm_monika_finished_caching_audio:
     if store.mas_globals.in_idle_mode or (mas_canCheckActiveWindow() and not mas_isFocused()):
         m 1eud "Oh, looks like your song finished downloading.{w=1}{nw}"
         m 3eua "I'll just play that for us.{w=0.5}.{w=0.5}.{nw}"
-        $ ytm_playAudio(store.ytm_globals.audio_to_queue)
+        $ ytm_playAudio(store.ytm_globals.audio_to_queue["PATH"], name=store.ytm_globals.audio_to_queue["TITLE"])
 
     else:
         m 3eua "Oh, looks like your song finished downloading."
         m 1dsa "Let me just play it for us.{w=0.5}.{w=0.5}.{nw}"
-        $ ytm_playAudio(store.ytm_globals.audio_to_queue)
+        $ ytm_playAudio(store.ytm_globals.audio_to_queue["PATH"], name=store.ytm_globals.audio_to_queue["TITLE"])
 
         if renpy.random.randint(1, 25) == 1:
             $ current_time = datetime.datetime.now().time()
