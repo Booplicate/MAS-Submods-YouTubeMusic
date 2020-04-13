@@ -21,12 +21,13 @@ DDLC/game/
     Submods/
         Utilities/
             paste/
-                paste.rpyc
+                paste.rpy
         YouTube Music/
             temp/
-            ytm_overrides.rpyc
-            ytm_topics.rpyc
-            ytm_utils.rpyc
+            ytm_main.rpy
+            ytm_overrides.rpy
+            ytm_topics.rpy
+            ytm_utils.rpy
 ```
 
 ## Usage:
