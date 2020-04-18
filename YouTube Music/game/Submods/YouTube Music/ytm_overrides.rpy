@@ -409,7 +409,7 @@ python early:
             # Pickle as a str is safer
             return (str, (self.filename, ))
 
-    def periodic_override(self):
+    def ytm_periodic_override(self):
         """
         This is the periodic call that causes this channel to load new stuff
         into its queues, if necessary.
@@ -551,4 +551,4 @@ python early:
 
             self.paused = want_pause
 
-    renpy.audio.audio.Channel.periodic = periodic_override
+    renpy.audio.audio.Channel.periodic = ytm_periodic_override
