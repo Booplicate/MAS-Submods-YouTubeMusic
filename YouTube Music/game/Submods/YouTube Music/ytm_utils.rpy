@@ -75,11 +75,17 @@ init -10 python:
         """
         Deletes the cache
         """
+        renpy.music.stop("music", 2)
+
         path = store.ytm_globals.FULL_MUSIC_DIRECTORY
 
         try:
-            renpy.music.stop("music", 2)
-            for trash in os.listdir(path): os.remove(path + trash)
+            for trash in os.listdir(path):
+                if (
+                    os.path.isfile(path + trash)
+                    and trash.endswith(store.ytm_globals.EXTENSION)
+                ):
+                    os.remove(path + trash)
         except Exception as e:
             ytm_writeLog("Couldn't remove cache.", e)
 
@@ -384,7 +390,10 @@ init -10 python:
             or False if we got an exception
         """
         try:
-            video = pafy.new(url)
+            video = pafy.new(
+                url=url,
+                ydl_opts={"cachedir": store.ytm_globals.FULL_MUSIC_DIRECTORY}
+            )
             stream = video.getbestaudio(preftype="webm")
         except Exception as e:
             ytm_writeLog("Failed to request audio stream.", e)
