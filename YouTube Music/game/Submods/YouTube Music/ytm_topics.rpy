@@ -141,7 +141,7 @@ label ytm_monika_find_music(skip_check=False):
                     and "i love you" in lower_search_request
                 ):
                     label .reaction_ily:
-                        m 1hua "I love you too! Ehehe~"
+                        m 1hubsa "I love you too! Ehehe~"
 
                 m 1dsa "Let me see what I can find.{w=0.5}{nw}"
 

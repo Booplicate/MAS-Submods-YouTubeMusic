@@ -1,7 +1,7 @@
 
 # # # "GLOBALS" STUFF
 
-init -15 python in ytm_globals:
+init 1 python in ytm_globals:
     # Did we check the connection this sesh?
     has_connection = None
 
@@ -24,11 +24,17 @@ init -15 python in ytm_globals:
     WRITING_CHUNK = 262144
 
     # Url parts
+    GOOGLE = "http://www.google.com/"
     YOUTUBE = "https://www.youtube.com/"
     SEARCH = "results?search_query="
 
-    # API key for Google API
-    # API_KEY = ""
+    HEADERS = {
+        # Mozilla/5.0 (Windows NT 6.1; Win64; x64)
+        "User-Agent": "Just Monika! (MAS v. {0})".format(renpy.config.version),
+        "Accept-Language": "en-US",
+        "Content-Language": "en-US",
+        "Accept-Charset": "utf8"
+    }
 
     # Did we just start a loop or we're continuing looping?
     first_pass = True
@@ -47,7 +53,7 @@ init -15 python in ytm_globals:
     # Cache extension
     EXTENSION = ".cache"
 
-init -10 python:
+init 2 python:
     import os
     import urllib2
     from re import sub
@@ -91,12 +97,11 @@ init -10 python:
 
     def ytm_fixPersistent():
         """
-        Just in case
         Func to clean persistent from AudioData objects,
-        so if someone somehow got the bad data in their persistent
+        so if someone somehow got the bad data in their persistent,
         we can easily remove these bits
         """
-        for audio in store.persistent._seen_audio.iterkeys():
+        for audio in reversed(store.persistent._seen_audio.keys()):
             if isinstance(audio, AudioData):
                 store.persistent._seen_audio.pop(audio)
                 ytm_writeLog("Found bad data in persistent and removed it.")
@@ -106,7 +111,6 @@ init -10 python:
     def ytm_isOnline(force_update=False):
         """
         Checks if we have an internet connection
-        NOTE: checks only once per sesh!
 
         RETURNS:
             True if we do,
@@ -118,10 +122,17 @@ init -10 python:
             or not store.ytm_globals.has_connection
         ):
             try:
-                urllib2.urlopen(store.ytm_globals.YOUTUBE, timeout=15)
+                request = urllib2.Request(
+                    url=store.ytm_globals.GOOGLE,
+                    headers=store.ytm_globals.HEADERS
+                )
+                urllib2.urlopen(
+                    request,
+                    timeout=15
+                )
                 store.ytm_globals.has_connection = True
 
-            except urllib2.URLError as e:
+            except Exception as e:
                 ytm_writeLog("No connection.", e)
                 store.ytm_globals.has_connection = False
 
@@ -227,17 +238,12 @@ init -10 python:
         RETURNS:
             html data
         """
-        headers = {
-            # Mozilla/5.0 (Windows NT 6.1; Win64; x64)
-            "User-Agent": "Just Monika! (MAS v. %s)" % config.version,
-            "Accept-Language": "en-US",
-            "Content-Language": "en-US",
-            "Accept-Charset": "utf8"
-        }
-        req = urllib2.Request(url=url, headers=headers)
-
+        request = urllib2.Request(
+            url=url,
+            headers=store.ytm_globals.HEADERS
+        )
         try:
-            html = urllib2.urlopen(req, timeout=15).read()
+            html = urllib2.urlopen(request, timeout=15).read()
         except Exception as e:
             ytm_writeLog("Failed to request HTML data.", e)
             return False
@@ -369,8 +375,12 @@ init -10 python:
         RETURNS:
             pure URL or False if got an exception
         """
+        request = urllib2.Request(
+            url=stream.url,
+            headers=store.ytm_globals.HEADERS
+        )
         try:
-            xml = urllib2.urlopen(stream.url, timeout=15).read()
+            xml = urllib2.urlopen(request, timeout=15).read()
         except Exception as e:
             ytm_writeLog("Failed to request XML data.", e)
             return False
@@ -405,15 +415,23 @@ init -10 python:
             ytm_writeLog("Audio stream is NoneType. Live streams are not supported.")
             return False
 
+        # fix stream if youtube fooked up
         if ytm_isBadStream(stream):
             # NOTE: Technically we can get False instead of the URL
             url_to_audio = ytm_fixStreamURL(stream)
         else:
             url_to_audio = stream.url
 
+        # make a request
+        request = urllib2.Request(
+            url=url_to_audio,
+            headers=store.ytm_globals.HEADERS
+        )
+
+        # get size
         try:
-            # yt sends str, need to convert
-            content_size = int(urllib2.urlopen(url_to_audio).info().getheaders("Content-Length")[0])
+            # NOTE: yt sends str, need to convert
+            content_size = int(urllib2.urlopen(request, timeout=15).info().getheaders("Content-Length")[0])
         except Exception as e:
             ytm_writeLog("Failed to request content size.", e)
             return False
@@ -481,15 +499,13 @@ init -10 python:
         cache = b""
         bottom_bracket = 0
         top_bracket = store.ytm_globals.REQUEST_CHUNK
-        headers = {
-            "User-Agent": "Just Monika! (MAS v. %s)" % config.version,
-            "Range": "bytes=%s-%s" % (bottom_bracket, top_bracket)
-        }
+        headers = dict(store.ytm_globals.HEADERS)
+        headers.update({"Range": "bytes={0}-{1}".format(bottom_bracket, top_bracket)})
 
         try:
             # TODO: should have this part only once
-            req = urllib2.Request(url=url, headers=headers)
-            response = urllib2.urlopen(req)
+            request = urllib2.Request(url=url, headers=headers)
+            response = urllib2.urlopen(request, timeout=15)
 
             while True:
                 cache_buffer = response.read(store.ytm_globals.WRITING_CHUNK)
@@ -506,9 +522,9 @@ init -10 python:
                 ):
                     bottom_bracket = top_bracket
                     top_bracket += store.ytm_globals.REQUEST_CHUNK
-                    headers["Range"] = "bytes=%s-%s" % (bottom_bracket, top_bracket)
-                    req = urllib2.Request(url=url, headers=headers)
-                    response = urllib2.urlopen(req)
+                    headers["Range"] = "bytes={0}-{1}".format(bottom_bracket, top_bracket)
+                    request = urllib2.Request(url=url, headers=headers)
+                    response = urllib2.urlopen(request, timeout=15)
 
         except Exception as e:
             ytm_writeLog("Failed to cache audio data.", e)
@@ -533,14 +549,12 @@ init -10 python:
         cache_size = 0
         bottom_bracket = 0
         top_bracket = store.ytm_globals.REQUEST_CHUNK
-        headers = {
-            "User-Agent": "Just Monika! (MAS v. %s)" % config.version,
-            "Range": "bytes=%s-%s" % (bottom_bracket, top_bracket)
-        }
+        headers = dict(store.ytm_globals.HEADERS)
+        headers.update({"Range": "bytes={0}-{1}".format(bottom_bracket, top_bracket)})
 
         try:
-            req = urllib2.Request(url=url, headers=headers)
-            response = urllib2.urlopen(req)
+            request = urllib2.Request(url=url, headers=headers)
+            response = urllib2.urlopen(request, timeout=15)
 
             with open(directory, 'wb') as audio_cache:
                 while True:
@@ -558,9 +572,9 @@ init -10 python:
                     ):
                         bottom_bracket = top_bracket
                         top_bracket += store.ytm_globals.REQUEST_CHUNK
-                        headers["Range"] = "bytes=%s-%s" % (bottom_bracket, top_bracket)
-                        req = urllib2.Request(url = url, headers=headers)
-                        response = urllib2.urlopen(req)
+                        headers["Range"] = "bytes={0}-{1}".format(bottom_bracket, top_bracket)
+                        request = urllib2.Request(url = url, headers=headers)
+                        response = urllib2.urlopen(request, timeout=15)
 
         except Exception as e:
             ytm_writeLog("Failed to cache audio data.", e)
@@ -637,7 +651,7 @@ init -10 python:
 
 # # # THREADING STUFF
 
-init -5 python:
+init 5 python:
     import store.mas_threading as mas_threading
 
     def __ytm_th_Search(raw_search_request):
