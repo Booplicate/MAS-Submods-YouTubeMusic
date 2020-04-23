@@ -296,6 +296,7 @@ init 2 python:
             if (
                 not "&list=" in data["href"]
                 and not "/user" in data["href"]
+                and not "/channel" in data["href"]
                 # "/watch?v=" in data["href"]
             ):
                 videos_info.append((sub("[\[\]\~\{\}\"\']", "", data["title"]), store.ytm_globals.YOUTUBE + data["href"]))
