@@ -87,73 +87,77 @@ init 999:
 
             $ import store.songs as songs
 
+            # logic to ensure Return works
             if songs.current_track is None:
                 $ return_value = songs.NO_SONG
             else:
                 $ return_value = songs.current_track
 
+            #Allows the music menu to quit using hotkey
             key "noshift_M" action Return(return_value)
             key "noshift_m" action Return(return_value)
 
             zorder 200
 
-            style_prefix mas_ui.mms_style_prefix
+            style_prefix "music_menu"
 
             frame:
-                style mas_ui.mms_frame_outer_style
+                style "music_menu_outer_frame"
 
                 hbox:
                     frame:
-                        style mas_ui.mms_frame_navigation_style
+                        style "music_menu_outer_frame"
 
                     frame:
-                        style mas_ui.mms_frame_content_style
+                        style "music_menu_content_frame"
 
                         transclude
                 vbox:
-                    style_prefix mas_ui.mms_style_prefix
+                    style_prefix "music_menu"
 
                     xpos gui.navigation_xpos
             #        yalign 0.4
                     spacing gui.navigation_spacing
 
+                    # wonderful loop so we can dynamically add songs
                     for name,song in music_page:
                         textbutton _(name) action Return(song)
             vbox:
                 yalign 1.0
 
                 hbox:
+                    # dynamic prevous text, so we can keep button size alignments
                     if page_num > 0:
                         textbutton _("<<<< Prev"):
-                            style mas_ui.mms_button_prev_style
+                            style "music_menu_prev_button"
                             action Return(page_num - 1)
 
                     else:
                         textbutton _( " "):
-                            style mas_ui.mms_button_prev_style
+                            style "music_menu_prev_button"
                             sensitive False
 
                     if more_pages:
                         textbutton _("Next >>>>"):
-                            style mas_ui.mms_button_return_style
+                            style "music_menu_return_button"
                             action Return(page_num + 1)
 
                 textbutton _(songs.NO_SONG): 
-                    style mas_ui.mms_button_return_style
+                    style "music_menu_return_button"
                     action Return(songs.NO_SONG)
 
                 if store.ytm_globals.is_playing:
                     if not renpy.music.get_pause():
                         textbutton _(songs.PAUSE):
-                            style mas_ui.mms_button_return_style
+                            style "music_menu_return_button"
                             action Return(songs.PAUSE)
                     else:
                         textbutton _(songs.UNPAUSE):
-                            style mas_ui.mms_button_return_style
+                            style "music_menu_return_button"
                             action Return(songs.UNPAUSE)
 
                 textbutton _("Return"):
-                    style mas_ui.mms_button_return_style
+                    style "music_menu_return_button"
                     action Return(return_value)
 
             label "Music Menu"
@@ -273,11 +277,13 @@ init 999:
 
             $ import store.songs as songs
 
+            # logic to ensure Return works
             if songs.current_track is None:
                 $ return_value = songs.NO_SONG
             else:
                 $ return_value = songs.current_track
 
+            #Logic to fix looping upon exiting the music menu
             if (
                 store.songs.current_track == store.songs.FP_NIGHTMUSIC
                 or store.songs.current_track and "nightmusic" in store.songs.current_track
@@ -289,51 +295,58 @@ init 999:
             else:
                 $ return_key = return_value
 
+            #Allows the music menu to quit using hotkey
             key "noshift_M" action Return(return_key)
             key "noshift_m" action Return(return_key)
 
             zorder 200
 
-            style_prefix mas_ui.mms_style_prefix
+            style_prefix "music_menu"
 
             frame:
                 hbox:
+                    # dynamic prevous text, so we can keep button size alignments
                     if page_num > 0:
                         textbutton _("<<<< Prev"):
-                            style mas_ui.mms_button_prev_style
+                            style "music_menu_prev_button"
                             action Return(page_num - 1)
 
                     else:
                         textbutton _( " "):
-                            style mas_ui.mms_button_prev_style
+                            style "music_menu_prev_button"
                             sensitive False
 
                     if more_pages:
                         textbutton _("Next >>>>"):
-                            style mas_ui.mms_button_return_style
+                            style "music_menu_return_button"
                             action Return(page_num + 1)
-                style mas_ui.mms_frame_outer_style
+
+                style "music_menu_outer_frame"
+
                 hbox:
 
                     frame:
-                        style mas_ui.mms_frame_navigation_style
+                        style "music_menu_outer_frame"
 
                     frame:
-                        style mas_ui.mms_frame_content_style
+                        style "music_menu_content_frame"
 
                         transclude
+
+                # this part copied from navigation menu
                 vbox:
-                    style_prefix mas_ui.mms_style_prefix
+                    style_prefix "music_menu"
 
                     xpos gui.navigation_xpos
             #        yalign 0.4
                     spacing gui.navigation_spacing
 
+                    # wonderful loop so we can dynamically add songs
                     for name,song in music_page:
                         textbutton _(name) action Return(song)
 
                     vbox:
-                        style_prefix mas_ui.cbx_style_prefix
+                        style_prefix "check"
                         textbutton _("Playlist Mode"):
                             action [ToggleField(persistent, "_music_playlist_mode"), Function(nm_utils.modeChange)]
                             selected persistent._music_playlist_mode
@@ -341,21 +354,21 @@ init 999:
                 yalign 1.0
 
                 textbutton _(songs.NO_SONG):
-                    style mas_ui.mms_button_return_style
+                    style "music_menu_return_button"
                     action Return(songs.NO_SONG)
 
                 if store.ytm_globals.is_playing:
                     if not renpy.music.get_pause():
                         textbutton _(songs.PAUSE):
-                            style mas_ui.mms_button_return_style
+                            style "music_menu_return_button"
                             action Return(songs.PAUSE)
                     else:
                         textbutton _(songs.UNPAUSE):
-                            style mas_ui.mms_button_return_style
+                            style "music_menu_return_button"
                             action Return(songs.UNPAUSE)
 
                 textbutton _("Return"):
-                    style mas_ui.mms_button_return_style
+                    style "music_menu_return_button"
                     if (
                         store.songs.current_track == store.songs.FP_NIGHTMUSIC
                         or store.songs.current_track and "nightmusic" in store.songs.current_track
