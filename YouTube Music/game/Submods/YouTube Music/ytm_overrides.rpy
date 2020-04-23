@@ -106,12 +106,13 @@ init 999:
 
                 hbox:
                     frame:
-                        style "music_menu_outer_frame"
+                        style "music_menu_navigation_frame"
 
                     frame:
                         style "music_menu_content_frame"
 
                         transclude
+
                 vbox:
                     style_prefix "music_menu"
 
@@ -326,7 +327,7 @@ init 999:
                 hbox:
 
                     frame:
-                        style "music_menu_outer_frame"
+                        style "music_menu_navigation_frame"
 
                     frame:
                         style "music_menu_content_frame"
