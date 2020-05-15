@@ -48,8 +48,10 @@ init 1 python in ytm_globals:
     current_song_from_playlist = 0
 
     # We keep cache here
+    GAME_DIR = renpy.config.gamedir.replace("\\", "/")
     SHORT_MUSIC_DIRECTORY = "/Submods/YouTube Music/temp/"
-    FULL_MUSIC_DIRECTORY = renpy.config.gamedir.replace("\\", "/") + SHORT_MUSIC_DIRECTORY
+    FULL_MUSIC_DIRECTORY = GAME_DIR + SHORT_MUSIC_DIRECTORY
+    YT_SIG_DIRECTORY = FULL_MUSIC_DIRECTORY + "/youtube-sigfuncs/"
     # Cache extension
     EXTENSION = ".cache"
 
@@ -77,23 +79,57 @@ init 2 python:
             e = "Unknown"
         store.mas_utils.writelog("[YTM ERROR]: {0} Exception: {1}\n".format(msg, e))
 
-    def ytm_cleanUp():
+    def ytm_deleteFiles(path, extension, e_str=None):
+        """
+        Do that Monika does the best
+
+        IN:
+            path - the path we're deleting files in
+            extension - the extension files should have in order to get deleted
+            e_str - the message we log along with the exception (if one occurs)
+                if None will use an empty string
+                (Default: None)
+        """
+        try:
+            for file in os.listdir(path):
+                if (
+                    os.path.isfile(path + file)
+                    and file.endswith(extension)
+                ):
+                    os.remove(path + file)
+        except Exception as e:
+            if not e_str:
+                e_str = ""
+            ytm_writeLog(e_str, e)
+
+    def ytm_deleteCache():
         """
         Deletes the cache
         """
-        renpy.music.stop("music", 2)
+        renpy.music.stop("music", 1)
 
-        path = store.ytm_globals.FULL_MUSIC_DIRECTORY
+        ytm_deleteFiles(
+            store.ytm_globals.FULL_MUSIC_DIRECTORY,
+            store.ytm_globals.EXTENSION,
+            "Couldn't remove cache."
+        )
 
-        try:
-            for trash in os.listdir(path):
-                if (
-                    os.path.isfile(path + trash)
-                    and trash.endswith(store.ytm_globals.EXTENSION)
-                ):
-                    os.remove(path + trash)
-        except Exception as e:
-            ytm_writeLog("Couldn't remove cache.", e)
+    def ytm_deleteSignatures():
+        """
+        Deletes youtube signatures
+        """
+        ytm_deleteFiles(
+            store.ytm_globals.YT_SIG_DIRECTORY,
+            ".json",
+            "Couldn't remove signatures."
+        )
+
+    def ytm_cleanUp():
+        """
+        Makes it so you can't call my submod a bloatware
+        """
+        ytm_deleteCache()
+        ytm_deleteSignatures()
 
     def ytm_fixPersistent():
         """
