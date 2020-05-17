@@ -1,8 +1,7 @@
 
 # YouTube Music
 
-A submod which allows you to listen to music from youtube in the game. Compatible with [Night Music](https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music). Works only on Windows. It could work on Mac/Linux, but since I don't have these installed, I won't add support to them. If you're willing to help me with testing on those systems, let me know (can open an issue).
-The submod is tested to work with MAS v0.11.0+ (both stable/unstable)
+A submod which allows you to listen to music from youtube in the game. Compatible with [Night Music](https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music). Works on Windows, MacOS and Linux.
 
 ## Installation:
 0. Make sure you're running the latest version of MAS.
