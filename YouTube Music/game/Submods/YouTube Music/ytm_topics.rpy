@@ -51,7 +51,7 @@ init 5 python:
             category=["music"],
             pool=True,
             unlocked=False,
-            rules={"no unlock": None},
+            rules={"no unlock": None, "bookmark_rule": store.mas_bookmarks_derand.WHITELIST},
             aff_range=(mas_aff.NORMAL, None)
         )
     )
@@ -67,7 +67,6 @@ label ytm_monika_find_music(skip_check=False):
             return
 
     python:
-        # no_request_counter = 0
         ready = False
         response_quips = [
             "Anything new in your playlist?",
@@ -90,20 +89,13 @@ label ytm_monika_find_music(skip_check=False):
         $ lower_search_request = raw_search_request.lower()
 
         if lower_search_request == "":
-            m 1eka "Oh...{w=0.2} I really would like to listen to music with you!"
-            m 1eub "Let me know when you have time~"
+            if not ytm_globals.is_playing:
+                m 1eka "Oh...{w=0.2} I really would like to listen to music with you!"
+                m 1eub "Let me know when you have time~"
+
+            else:
+                m 1eka "Oh, okay."
             $ ready = True
-
-        # elif lower_search_request == "":
-        #     if no_request_counter == 0:
-        #         $ no_request_counter += 1
-        #         m 1rksdla "[player]...{w=0.5} {nw}"
-        #         extend 1rksdlb "You have to pick a song!"
-
-        #     else:
-        #         m 2dsu ".{w=0.2}.{w=0.2}.{w=0.2}"
-        #         m 2tsb "[player], stop teasing me!"
-        #         $ ready = True
 
         else:
             if ytm_utils.isYouTubeURL(raw_search_request):
@@ -167,9 +159,12 @@ label ytm_monika_find_music(skip_check=False):
                         call .ytm_process_audio_info(_return)
 
                     elif _return == "_changed_mind":
-                        m 1eka "Oh... {w=0.2}{nw}"
-                        extend 3ekb "I really love to listen to music with you!"
-                        m 1eua "Let me know when you have time~"
+                        if not ytm_globals.is_playing:
+                            m 1eka "Oh... {w=0.2}{nw}"
+                            extend 3ekb "I really love to listen to music with you!"
+                            m 1eua "Let me know when you have time~"
+                        else:
+                            m 1eka "Oh, okay."
                         $ ready = True
 
                     elif _return == "_another_song":
@@ -202,7 +197,6 @@ label ytm_monika_find_music(skip_check=False):
         del[ready]
         del[raw_search_request]
         del[lower_search_request]
-        # del[no_request_counter]
 
     return
 
@@ -315,8 +309,6 @@ label ytm_monika_finished_caching_audio:
             elif mas_isAnytoN(current_time, 5, 45):
                 m 5eubla "I'm glad we can relax a little before the day begins~"
 
-            # elif renpy.random.randint(1, 25) == 1:
-            #     pass
             else:
                 $ renpy.pause(4.0, hard=True)
 

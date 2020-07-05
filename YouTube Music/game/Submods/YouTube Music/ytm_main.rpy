@@ -100,32 +100,6 @@ screen ytm_settings_pane():
 
 screen ytm_history_submenu(animate=True):
     python:
-        def _calculateMenuHeight():
-            total_songs = len(store.ytm_globals.search_history)
-
-            if total_songs > 2:
-                factor = 45
-            elif total_songs == 2:
-                factor = 46
-            else:
-                factor = 47
-
-            height = total_songs * factor
-
-            return height if height <= 180 else 180
-
-        def _calculateButtonsProps():
-            total_songs = len(store.ytm_globals.search_history)
-
-            if total_songs > 4:
-                xpos = 20
-                xsize = 400
-            else:
-                xpos = 0
-                xsize = 420
-
-            return (xpos, xsize)
-
         def _setParentInputValue(new_input):
             """
             A wrapper which allows us to do the magic in local env
@@ -139,18 +113,14 @@ screen ytm_history_submenu(animate=True):
                 ytm_input.set_text(new_input)
 
     default settings = {"animate": animate}
-    default _height = _calculateMenuHeight()
-    default xpos_xsize_tuple = _calculateButtonsProps()
 
     style_prefix "scrollable_menu"
 
-    frame:
+    fixed:
         if settings["animate"]:
             at ytm_menu_slide
-        # 430, 340, 420, ???
-        area (430, 310, 420, _height)
-        # FIXME: better use my own styles in case the devs make changes for MAS ones
-        style "mas_extra_menu_frame"
+
+        area (410, 315, 440, 220)
 
         viewport:
             id "viewport"
@@ -160,8 +130,8 @@ screen ytm_history_submenu(animate=True):
             vbox:
                 for button_prompt, input_value in reversed(store.ytm_globals.search_history):
                     textbutton button_prompt:
-                        xpos xpos_xsize_tuple[0]
-                        xsize xpos_xsize_tuple[1]
+                        xpos 20
+                        xsize 420
                         selected False
                         action Function(_setParentInputValue, input_value)
 
@@ -215,7 +185,7 @@ screen ytm_input_screen(prompt):
         vbox:
             align (0.5, 0.5)
             spacing 5
-            ypos -270
+            ypos -263
             style_prefix "choice"
 
             textbutton _("Nevermind."):
