@@ -14,9 +14,9 @@ init -990 python in mas_submod_utils:
         name="YouTube Music",
         description=(
             "A submod which allows you to listen to music from YouTube in the game. "
-            "Monika searches songs by names, but you can also give her links. "
+            "Monika searches songs by names, but you can also give her direct youtube links.\n"
             "Recommended to use {a=https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste}{i}{u}Paste{/u}{/i}{/a} for copying/pasting links.\n"
-            "Compatible with {a=https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music}{i}{u}Nightmusic{/u}{/i}{/a}."
+            "Fully compatible with {a=https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music}{i}{u}Nightmusic{/u}{/i}{/a}."
         ),
         version="2.3",
         settings_pane="ytm_settings_pane",
@@ -75,7 +75,7 @@ screen ytm_settings_pane():
             text "Status: [connection]"
 
             if not store.ytm_globals.has_connection:
-                if _tooltip:
+                if _tooltip is not None:
                     textbutton "(test connection)":
                         xpos -20
                         ypos 1
