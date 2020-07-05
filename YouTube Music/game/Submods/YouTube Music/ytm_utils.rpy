@@ -192,6 +192,12 @@ init python in ytm_utils:
         IN:
             entry - an entry to add
         """
+        # since we use this in buttons prompts, we need to "sanitize" it
+        entry = (
+            entry[0].replace("[", "[[").replace("{", "{{"),
+            entry[1]
+        )
+
         if entry in ytm_globals.search_history:
             ytm_globals.search_history.remove(entry)
         ytm_globals.search_history.append(entry)
@@ -232,6 +238,14 @@ init python in ytm_utils:
                     timeout=15
                 )
                 ytm_globals.has_connection = True
+
+            # extra handling for the Too Many Requests response
+            except urllib2.HTTPError as e:
+                if e.code == 429:
+                    ytm_globals.has_connection = True
+                else:
+                    writeLog("No connection.", e)
+                    ytm_globals.has_connection = False
 
             except Exception as e:
                 writeLog("No connection.", e)
@@ -897,7 +911,7 @@ init 5 python in ytm_threading:
             ytm_globals.audio_to_queue["TITLE"] = title
             # NOTE: The play function uses short paths so we need to cut a part of the path here
             ytm_globals.audio_to_queue["PATH"] = directory.split(renpy.config.gamedir.replace("\\", "/"), 1)[1]
-            pushEvent("ytm_monika_finished_caching_audio")
+            store.pushEvent("ytm_monika_finished_caching_audio")
             return True
         # got an exception somewhere
         return False
