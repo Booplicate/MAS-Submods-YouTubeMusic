@@ -131,7 +131,7 @@ label ytm_monika_find_music(skip_check=False):
             else:
                 $ ytm_utils.addSearchHistory(
                     (
-                        raw_search_request,
+                        lower_search_request,
                         lower_search_request
                     )
                 )

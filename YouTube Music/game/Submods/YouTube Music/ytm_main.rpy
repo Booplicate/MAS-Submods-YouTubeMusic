@@ -158,7 +158,7 @@ screen ytm_history_submenu(animate=True):
             mousewheel True
 
             vbox:
-                for button_prompt, input_value in store.ytm_globals.search_history:
+                for button_prompt, input_value in reversed(store.ytm_globals.search_history):
                     textbutton button_prompt:
                         xpos xpos_xsize_tuple[0]
                         xsize xpos_xsize_tuple[1]

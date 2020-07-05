@@ -186,15 +186,27 @@ init python in ytm_utils:
 
     def addSearchHistory(entry):
         """
+        Adds the given entry to the search history list
+        Will update the list if the entry is already in it
+
+        IN:
+            entry - an entry to add
         """
-        if entry not in ytm_globals.search_history:
-            ytm_globals.search_history.append(entry)
+        if entry in ytm_globals.search_history:
+            ytm_globals.search_history.remove(entry)
+        ytm_globals.search_history.append(entry)
 
     def addAudioHistory(entry):
         """
+        Adds the given entry to the audio history list
+        Will update the list if the entry is already in it
+
+        IN:
+            entry - an entry to add
         """
-        if entry not in ytm_globals.audio_history:
-            ytm_globals.audio_history.append(entry)
+        if entry in ytm_globals.audio_history:
+            ytm_globals.audio_history.remove(entry)
+        ytm_globals.audio_history.append(entry)
 
 # # # URL STUFF
 
