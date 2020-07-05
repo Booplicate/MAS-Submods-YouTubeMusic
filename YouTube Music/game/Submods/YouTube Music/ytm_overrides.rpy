@@ -2,16 +2,17 @@
 # Overrides
 init 999:
     # General overrides
-    $ store.mas_submod_utils.registerFunction("quit", ytm_cleanUp)
-    $ store.songs.PAUSE = "Pause"
-    $ store.songs.UNPAUSE = "Play"
-    $ store.songs.FP_PAUSE = "pause"
-    $ store.songs.FP_UNPAUSE = "unpause"
+    python:
+        store.mas_submod_utils.registerFunction("quit", ytm_utils.cleanUp)
+        store.songs.PAUSE = "Pause"
+        store.songs.UNPAUSE = "Play"
+        store.songs.FP_PAUSE = "pause"
+        store.songs.FP_UNPAUSE = "unpause"
 
     # Overrides for vanilla MAS
     if not store.mas_submod_utils.isSubmodInstalled("Nightmusic"):
         python:
-            def play_song(song, fadein=0.0, loop=True, set_per=False, fadeout=0.0, **kwargs):
+            def play_song(song, fadein=0.0, loop=True, set_per=False, fadeout=0.0, if_changed=False, **kwargs):
                 """
                 For docs look for the og func :P
                 """
@@ -36,7 +37,8 @@ init 999:
                         loop=loop,
                         synchro_start=True,
                         fadein=fadein,
-                        fadeout=fadeout
+                        fadeout=fadeout,
+                        if_changed=if_changed
                     )
 
                 if not ytm_flag:

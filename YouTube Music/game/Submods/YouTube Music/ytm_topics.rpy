@@ -18,7 +18,7 @@ label ytm_monika_introduction:
     # playlists support wen (soon:tm:)
     m 3eua "You could also give me the link if you've found it already."
 
-    if ytm_isOnline():
+    if ytm_utils.isOnline():
         m 1eua "Would you like me to find some music for us right now?{nw}"
         $ _history_list.pop()
         menu:
@@ -58,8 +58,8 @@ init 5 python:
 
 label ytm_monika_find_music(skip_check=False):
     if not skip_check:
-        if ytm_isOnline():
-            if not store.ytm_globals.is_playing:
+        if ytm_utils.isOnline():
+            if not ytm_globals.is_playing:
                 m 1eub "Of course!"
         else:
             m 1rksdla "..."
@@ -67,7 +67,7 @@ label ytm_monika_find_music(skip_check=False):
             return
 
     python:
-        no_request_counter = 0
+        # no_request_counter = 0
         ready = False
         response_quips = [
             "Anything new in your playlist?",
@@ -80,33 +80,34 @@ label ytm_monika_find_music(skip_check=False):
 
     m 1eua "[response_quip]"
 
-    $ del[response_quips]
-    $ del[response_quip]
-
     while not ready:
         show monika 1eua at t11
-        $ raw_search_request = renpy.input("Type 'Nevermind' if you change your mind.", length=80).strip('\t\n\r')
+        $ raw_search_request = mas_input(
+            "You can tell me its name or give me a direct link.",
+            length=80,
+            screen="ytm_input_screen"
+        ).strip('\t\n\r')
         $ lower_search_request = raw_search_request.lower()
 
-        if lower_search_request == "nevermind":
+        if lower_search_request == "":
             m 1eka "Oh...{w=0.2} I really would like to listen to music with you!"
             m 1eub "Let me know when you have time~"
             $ ready = True
 
-        elif lower_search_request == "":
-            if no_request_counter == 0:
-                $ no_request_counter += 1
-                m 1rksdla "[player]...{w=0.5} {nw}"
-                extend 1rksdlb "You have to pick a song!"
+        # elif lower_search_request == "":
+        #     if no_request_counter == 0:
+        #         $ no_request_counter += 1
+        #         m 1rksdla "[player]...{w=0.5} {nw}"
+        #         extend 1rksdlb "You have to pick a song!"
 
-            else:
-                m 2dsu ".{w=0.2}.{w=0.2}.{w=0.2}"
-                m 2tsb "[player], stop teasing me!"
-                $ ready = True
+        #     else:
+        #         m 2dsu ".{w=0.2}.{w=0.2}.{w=0.2}"
+        #         m 2tsb "[player], stop teasing me!"
+        #         $ ready = True
 
         else:
-            if ytm_isYouTubeURL(raw_search_request):
-                # if ytm_isPlaylistURL(raw_search_request):
+            if ytm_utils.isYouTubeURL(raw_search_request):
+                # if isPlaylistURL(raw_search_request):
                 #     m "Would you like me to shuffle the playlist?{nw}"
                 #     $ _history_list.pop()
                 #     menu:
@@ -121,13 +122,20 @@ label ytm_monika_find_music(skip_check=False):
                 #     m "Alright, just give me a second..."
                 #     # TODO: do stuff in thread here and then play the first audio
                 #     $ del[_shuffle]
-                #     call .ytm_process_audio_info(store.ytm_globals.playlist[current_song_from_playlist])
+                #     call .ytm_process_audio_info(ytm_globals.playlist[current_song_from_playlist])
 
                 # else:
                 show monika 1dsa at t11
-                call .ytm_process_audio_info(raw_search_request)
+                call .ytm_process_audio_info(raw_search_request, add_to_search_hist=True)
 
             else:
+                $ ytm_utils.addSearchHistory(
+                    (
+                        raw_search_request,
+                        lower_search_request
+                    )
+                )
+
                 # Since I don't have plans to expand this, I'll leave it as is
                 if (
                     not renpy.seen_label("ytm_monika_find_music.reaction_your_reality")
@@ -145,14 +153,14 @@ label ytm_monika_find_music(skip_check=False):
 
                 m 1dsa "Let me see what I can find.{w=0.5}{nw}"
 
-                $ ytm_updateThreadArgs(ytm_search_music, [raw_search_request])
+                $ ytm_threading.updateThreadArgs(ytm_threading.search_music, [raw_search_request])
                 call ytm_search_loop
-                $ menu_list = ytm_buildMenuList(_return)
+                $ menu_list = ytm_utils.buildMenuList(_return)
 
                 if len(menu_list) > 0:
                     m 1eub "Alright! Look what I've found!"
                     show monika 1eua at t21
-                    call screen mas_gen_scrollable_menu(menu_list, store.ytm_globals.MENU_AREA, store.ytm_globals.MENU_XALIGN, store.ytm_globals.MENU_CHANGED_MIND, store.ytm_globals.MENU_ANOTHER_SONG)
+                    call screen mas_gen_scrollable_menu(menu_list, ytm_globals.SCR_MENU_AREA, ytm_globals.SCR_MENU_XALIGN, *ytm_globals.SCR_MENU_LAST_ITEMS)
                     show monika at t11
 
                     if "https" in _return:
@@ -189,24 +197,38 @@ label ytm_monika_find_music(skip_check=False):
 
                 $ del[menu_list]
     python:
+        del[response_quips]
+        del[response_quip]
         del[ready]
         del[raw_search_request]
         del[lower_search_request]
-        del[no_request_counter]
+        # del[no_request_counter]
 
     return
 
-label .ytm_process_audio_info(url):
+label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=True):
     window hide
-    $ ytm_updateThreadArgs(ytm_get_audio_info, [url])
+    $ ytm_threading.updateThreadArgs(ytm_threading.get_audio_info, [url])
     call ytm_get_audio_info_loop
     $ audio_info = _return
 
     if audio_info:
-        if ytm_findCache(audio_info["ID"]):
+        if add_to_search_hist:
+            $ ytm_utils.addSearchHistory(
+                (
+                    audio_info["TITLE"],
+                    ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["ID"]
+                )
+            )
+        if add_to_audio_hist:
+            $ ytm_utils.addAudioHistory(
+                ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["ID"]
+            )
+
+        if ytm_utils.findCache(audio_info["ID"]):
             m 1dsa "Let me play that for us.{w=.5}.{w=.5}.{nw}"
 
-            if ytm_playAudio(store.ytm_globals.SHORT_MUSIC_DIRECTORY + audio_info["ID"] + store.ytm_globals.EXTENSION, name=audio_info["TITLE"]):
+            if ytm_utils.playAudio(ytm_globals.SHORT_MUSIC_DIRECTORY + audio_info["ID"] + ytm_globals.EXTENSION, name=audio_info["TITLE"]):
                 m 1hua "There we go!"
                 # m "Playing it w/o downloading again! Good job, [player]!"
             else:
@@ -215,26 +237,26 @@ label .ytm_process_audio_info(url):
                 m 1eka "Let's try again later, alright?"
 
         else:
-            if ytm_shouldCacheFirst(audio_info["SIZE"]):
+            if ytm_utils.shouldCacheFirst(audio_info["SIZE"]):
                 m 3eub "We'll need to wait for a bit."
                 m 1hua "I hope you don't mind, [player]~"
                 # m "Soon we'll finish caching it and I'll queue it."
-                $ ytm_resetThread(ytm_cache_audio_from_url)
-                $ ytm_updateThreadArgs(
-                    ytm_cache_audio_from_url,
+                $ ytm_threading.resetThread(ytm_threading.cache_audio_from_url)
+                $ ytm_threading.updateThreadArgs(
+                    ytm_threading.cache_audio_from_url,
                     [
                         audio_info["URL"],
                         audio_info["TITLE"],
                         audio_info["SIZE"],
-                        store.ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["ID"] + store.ytm_globals.EXTENSION
+                        ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["ID"] + ytm_globals.EXTENSION
                     ]
                 )
-                $ ytm_cache_audio_from_url.start()
+                $ ytm_threading.cache_audio_from_url.start()
 
             else:
                 m 1dsa "Let me just play that for us.{w=0.5}{nw}"
-                $ ytm_updateThreadArgs(
-                    ytm_play_audio,
+                $ ytm_threading.updateThreadArgs(
+                    ytm_threading.play_audio,
                     [audio_info["URL"], audio_info["ID"], audio_info["TITLE"], audio_info["SIZE"], True]
                 )
                 call ytm_play_audio_loop
@@ -242,12 +264,12 @@ label .ytm_process_audio_info(url):
                 if _return:
                     m 1hua "There we go!"
                     # m "We quickly cached it and then queued, [player]."
-                    $ ytm_resetThread(ytm_cache_audio_from_ram)
-                    $ ytm_updateThreadArgs(
-                        ytm_cache_audio_from_ram,
-                        [_return, store.ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["ID"] + store.ytm_globals.EXTENSION]
+                    $ ytm_threading.resetThread(ytm_threading.cache_audio_from_ram)
+                    $ ytm_threading.updateThreadArgs(
+                        ytm_threading.cache_audio_from_ram,
+                        [_return, ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["ID"] + ytm_globals.EXTENSION]
                     )
-                    $ ytm_cache_audio_from_ram.start()
+                    $ ytm_threading.cache_audio_from_ram.start()
 
                 else:
                     m 1eud "Something went wrong, [player]..."
@@ -276,15 +298,16 @@ label ytm_monika_finished_caching_audio:
     if store.mas_globals.in_idle_mode or (mas_canCheckActiveWindow() and not mas_isFocused()):
         m 1eud "Oh, looks like your song finished downloading.{w=1}{nw}"
         m 3eua "I'll just play that for us.{w=0.5}.{w=0.5}.{nw}"
-        $ ytm_playAudio(store.ytm_globals.audio_to_queue["PATH"], name=store.ytm_globals.audio_to_queue["TITLE"])
+        $ ytm_utils.playAudio(ytm_globals.audio_to_queue["PATH"], name=ytm_globals.audio_to_queue["TITLE"])
 
     else:
         m 3eua "Oh, looks like your song finished downloading."
         m 1dsa "Let me just play it for us.{w=0.5}.{w=0.5}.{nw}"
-        $ ytm_playAudio(store.ytm_globals.audio_to_queue["PATH"], name=store.ytm_globals.audio_to_queue["TITLE"])
+        $ ytm_utils.playAudio(ytm_globals.audio_to_queue["PATH"], name=ytm_globals.audio_to_queue["TITLE"])
 
-        if renpy.random.randint(1, 25) == 1:
+        if renpy.random.randint(1, 20) == 1:
             $ current_time = datetime.datetime.now().time()
+
             show monika 5eubla at t11 zorder MAS_MONIKA_Z with dissolve
             if mas_isAnytoMN(current_time, 17, 45):
                 m 5eubla "Let's have another nice evening together~"
@@ -295,7 +318,8 @@ label ytm_monika_finished_caching_audio:
             # elif renpy.random.randint(1, 25) == 1:
             #     pass
             else:
-                $ renpy.pause(3.0, hard=True)
+                $ renpy.pause(4.0, hard=True)
+
             $ del[current_time]
 
         else:
@@ -303,12 +327,12 @@ label ytm_monika_finished_caching_audio:
     return
 
 label ytm_search_loop:
-    if store.ytm_globals.first_pass:
+    if ytm_globals.first_pass:
         $ ellipsis_count = 1
-        $ store.ytm_globals.first_pass = False
-        $ ytm_search_music.start()
+        $ ytm_globals.first_pass = False
+        $ ytm_threading.search_music.start()
 
-    if not ytm_search_music.done():
+    if not ytm_threading.search_music.done():
         if ellipsis_count == 3:
             $ _history_list.pop()
             m "Let me see what I can find.{fast}{w=0.5}{nw}"
@@ -324,29 +348,29 @@ label ytm_search_loop:
         $ _history_list.pop()
         m "Let me see what I can find...{fast}{nw}"
 
-        $ store.ytm_globals.first_pass = True
-        return ytm_search_music.get()
+        $ ytm_globals.first_pass = True
+        return ytm_threading.search_music.get()
 
 label ytm_get_audio_info_loop:
-    if store.ytm_globals.first_pass:
-        $ store.ytm_globals.first_pass = False
-        $ ytm_get_audio_info.start()
+    if ytm_globals.first_pass:
+        $ ytm_globals.first_pass = False
+        $ ytm_threading.get_audio_info.start()
 
-    if not ytm_get_audio_info.done():
-        pause 0.25
+    if not ytm_threading.get_audio_info.done():
+        pause 0.5
         jump ytm_get_audio_info_loop
 
     else:
-        $ store.ytm_globals.first_pass = True
-        return ytm_get_audio_info.get()
+        $ ytm_globals.first_pass = True
+        return ytm_threading.get_audio_info.get()
 
 label ytm_play_audio_loop:
-    if store.ytm_globals.first_pass:
+    if ytm_globals.first_pass:
         $ ellipsis_count = 1
-        $ store.ytm_globals.first_pass = False
-        $ ytm_play_audio.start()
+        $ ytm_globals.first_pass = False
+        $ ytm_threading.play_audio.start()
 
-    if not ytm_play_audio.done():
+    if not ytm_threading.play_audio.done():
         if ellipsis_count == 3:
             $ _history_list.pop()
             m "Let me just play that for us.{fast}{w=0.5}{nw}"
@@ -361,5 +385,5 @@ label ytm_play_audio_loop:
     else:
         $ _history_list.pop()
         m "Let me just play that for us...{fast}{nw}"
-        $ store.ytm_globals.first_pass = True
-        return ytm_play_audio.get()
+        $ ytm_globals.first_pass = True
+        return ytm_threading.play_audio.get()
