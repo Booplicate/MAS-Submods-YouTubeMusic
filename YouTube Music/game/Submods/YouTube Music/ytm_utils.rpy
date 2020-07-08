@@ -50,7 +50,7 @@ init -5 python in ytm_globals:
 
     HEADERS = {
         # Mozilla/5.0 (Windows NT 6.1; Win64; x64)
-        "User-Agent": "Just Monika! (MAS v.{0})".format(renpy.config.version),
+        "User-Agent": "Just Monika! (Monika After Story v{0})".format(renpy.config.version),
         "Accept-Language": "en-US",
         "Content-Language": "en-US",
         "Accept-Charset": "utf8"
