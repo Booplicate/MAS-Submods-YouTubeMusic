@@ -1,15 +1,7 @@
 
-# Default persistent vars
-# init -20:
-#     # NOTE: if I ever decide to use persistent, I'd use a single dict for settings
-#     # Maximum audio size to play from RAM (bytes)
-#     default persistent._ytm_audio_size_limit = 15
-#     # Maximum search results
-#     default persistent._ytm_search_limit = 15
-
 # Register the submod
-init -990 python in mas_submod_utils:
-    Submod(
+init -990 python:
+    store.mas_submod_utils.Submod(
         author="Booplicate",
         name="YouTube Music",
         description=(
@@ -18,10 +10,20 @@ init -990 python in mas_submod_utils:
             "Recommended to use {a=https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste}{i}{u}Paste{/u}{/i}{/a} for copying/pasting links.\n"
             "Fully compatible with {a=https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music}{i}{u}Nightmusic{/u}{/i}{/a}."
         ),
-        version="2.3",
+        version="2.4",
         settings_pane="ytm_settings_pane",
         version_updates={}
     )
+
+# Register the updater
+init -990 python:
+    if store.mas_submod_utils.isSubmodInstalled("Submod Updater Plugin"):
+        store.sup_utils.SubmodUpdater(
+            submod="YouTube Music",
+            user_name="Booplicate",
+            repository_name="MAS-Submods-YouTubeMusic",
+            update_dir=""
+        )
 
 # Define our settings screen
 screen ytm_settings_pane():
@@ -66,7 +68,7 @@ screen ytm_settings_pane():
             store.ytm_utils.isOnline(True)
 
     vbox:
-        box_wrap False
+        ypos 0
         xfill True
         xmaximum 800
         style_prefix "check"
@@ -77,26 +79,18 @@ screen ytm_settings_pane():
             if not store.ytm_globals.has_connection:
                 if _tooltip is not None:
                     textbutton "(test connection)":
-                        xpos -20
-                        ypos 1
+                        pos (-20, 1)
                         action Function(test_connection)
                         hovered SetField(_tooltip, "value", "Press to force checking your connection")
                         unhovered SetField(_tooltip, "value", _tooltip.default)
 
                 else:
                     textbutton "(test connection)":
-                        xpos -20
-                        ypos 1
+                        pos (-20, 1)
                         action Function(test_connection)
 
         if curr_track:
             text "Current track: [curr_track]"
-
-        # label "Maximum audio size to play from RAM: {0} MB".format(persistent._ytm_audio_size_limit)
-        # bar value FieldValue(persistent, "_ytm_audio_size_limit", range=47, max_is_zero=False, style="slider", offset=3, step=1)
-
-        # label "Maximum search results: {0} videos".format(persistent._ytm_search_limit)
-        # bar value FieldValue(persistent, "_ytm_search_limit", range=25, max_is_zero=False, style="slider", offset=5, step=1)
 
 screen ytm_history_submenu(animate=True):
     python:

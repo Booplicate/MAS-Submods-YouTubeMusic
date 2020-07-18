@@ -1,7 +1,7 @@
 
 # YouTube Music
 
-A submod which allows you to listen to music from youtube in the game. Compatible with [Night Music](https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music). Works only on Windows. MacOS and Linux versions are in development.
+A submod which allows you to listen to music from youtube in the game. Compatible with [Night Music](https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music).
 
 ## Installation:
 0. Make sure you're running the latest version of MAS.
@@ -10,7 +10,7 @@ A submod which allows you to listen to music from youtube in the game. Compatibl
 
 2. Close the game and extract the content from the zip you downloaded into your `DDLC/` folder. Exactly this folder, you should have `DDLC.exe` there.
 
-3. Optionally install [Paste](https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste) (allows you to paste links in the game).
+3. Optionally install [Paste](https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste) (allows pasting links in the game) and/or [Submod Updater Plugin](https://github.com/Booplicate/MAS-Submods-SubmodUpdaterPlugin) (allows updating submods via in-game updater).
 
 If you installed it correctly, your folders will look like this:
 ```
@@ -35,3 +35,6 @@ Monika will tell you everything in the game, just install the submod and launch 
 ## Limitations:
 RenPy doesn't support live-streams, nothing I can do about it. ~~*Maybe one day I'll move the submod to another audio system.*~~
 Currently YouTube playlists are not supported. I'm working on it, but it requires a lot of changes because of how RenPy handles audio.
+
+## Dependencies:
+YouTube accepts only encrypted connections, using it requires [SSL](https://github.com/Booplicate/MAS-Submods-SSL). This sub-util is shipped with releases.
