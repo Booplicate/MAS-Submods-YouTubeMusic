@@ -385,6 +385,10 @@ init 100:
 
             label "Music Menu"
 
+init -999 python:
+    import os
+    os.environ["SSL_CERT_FILE"] = renpy.config.gamedir + "/python-packages/certifi/cacert.pem"
+
 # AudioData support for RenPy 6.99.12
 python early:
     import io
