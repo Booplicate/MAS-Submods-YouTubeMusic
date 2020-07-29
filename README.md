@@ -35,6 +35,3 @@ Monika will tell you everything in the game, just install the submod and launch 
 ## Limitations:
 RenPy doesn't support live-streams, nothing I can do about it. ~~*Maybe one day I'll move the submod to another audio system.*~~
 Currently YouTube playlists are not supported. I'm working on it, but it requires a lot of changes because of how RenPy handles audio.
-
-## Dependencies:
-YouTube accepts only encrypted connections, using it requires [SSL](https://github.com/Booplicate/MAS-Submods-SSL). This sub-util is shipped with releases.
