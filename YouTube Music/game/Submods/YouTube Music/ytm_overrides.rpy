@@ -1,6 +1,6 @@
 
 # Overrides
-init 999:
+init 100:
     # General overrides
     python:
         store.mas_submod_utils.registerFunction("quit", ytm_utils.cleanUp)
