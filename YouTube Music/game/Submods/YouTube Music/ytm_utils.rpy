@@ -265,9 +265,7 @@ init python in ytm_utils:
             True if it's a YouTube URL,
             False if it is not
         """
-        if "/www.youtube.com/" in string or "/youtu.be/" in string:
-            return True
-        return False
+        return ("/www.youtube.com/" in string or "/youtu.be/" in string)
 
     def isPlaylistURL(string):
         """
@@ -283,9 +281,7 @@ init python in ytm_utils:
             True if it's a URL to a playlist,
             False otherwise
         """
-        if "list=" in string:
-            return True
-        return False
+        return "list=" in string
 
     def isSafeURL(string):
         """
@@ -299,7 +295,7 @@ init python in ytm_utils:
             True if safe URL,
             False otherwise
         """
-        return True if "https://" in string else False
+        return "https://" in string
 
     def makeSafeURL(string):
         """
@@ -353,7 +349,7 @@ init python in ytm_utils:
             url - a URL to open
 
         RETURNS:
-            html data
+            html data, or None if got an exception
         """
         request = urllib2.Request(
             url=url,
@@ -379,7 +375,6 @@ init python in ytm_utils:
             potentially clear html data
         """
         html_parser = HTMLParser()
-
         return html_parser.unescape(UnicodeDammit.detwingle(html))
 
 # # # VIDEO STUFF
@@ -473,7 +468,7 @@ init python in ytm_utils:
             (
                 video_info[0],
                 video_info[1],
-                bool(video_info[1] not in ytm_globals.audio_history),
+                (video_info[1] not in ytm_globals.audio_history),
                 False
             )
             for video_info in videos_info
@@ -522,7 +517,7 @@ init python in ytm_utils:
         RETURN:
             True - fooked up, False - we are good
         """
-        return True if "manifest" in stream.url else False
+        return "manifest" in stream.url
 
     def fixStreamURL(stream):
         """
@@ -610,9 +605,7 @@ init python in ytm_utils:
             True if we need to cache it before playing
             False otherwise
         """
-        # limit = persistent._ytm_audio_size_limit * 1048576
-        limit = ytm_globals.AUDIO_SIZE_LIMIT
-        return True if audio_size > limit else False
+        return audio_size > ytm_globals.AUDIO_SIZE_LIMIT
 
     def findCache(audio_id):
         """
@@ -622,12 +615,11 @@ init python in ytm_utils:
             audio_id - audio id (since we use it as a name for cache)
 
         RETURNS:
-            filepath to the cache if we already have it (even if it's small)
-            or False if found nothing
+            True if found,
+            False otherwise
         """
         directory = ytm_globals.FULL_MUSIC_DIRECTORY + audio_id + ytm_globals.EXTENSION
-
-        return directory if os.path.isfile(directory) else False
+        return os.path.isfile(directory)
 
     def bytesToAudioData(_bytes, name="Unknown"):
         """
@@ -642,7 +634,6 @@ init python in ytm_utils:
         RETURNS:
             AudioData object
         """
-        # NOTE: I could generate a name instead of using "Unknown"
         return store.AudioData(_bytes, name)
 
     def cacheDataToRAM(url, content_size):
@@ -655,7 +646,7 @@ init python in ytm_utils:
             content_size - the data's size
 
         RETURNS:
-            cache if we successfully downloaded it, False if got an exception
+            cache if we successfully downloaded it, None if got an exception
         """
         cache = b""
         bottom_bracket = 0
@@ -705,7 +696,7 @@ init python in ytm_utils:
                 NOTE: should include the file's name
 
         RETURNS:
-            cache if we successfully downloaded it, False if got an exception
+            cache if we successfully downloaded it, None if got an exception
         """
         cache_size = 0
         bottom_bracket = 0
@@ -760,7 +751,7 @@ init python in ytm_utils:
                 audio_cache.write(_bytes)
         except Exception as e:
             writeLog("Failed to write cache on disk from RAM.", e)
-            return None
+            return False
 
         return True
 
