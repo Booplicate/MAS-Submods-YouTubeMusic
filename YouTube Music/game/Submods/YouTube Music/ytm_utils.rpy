@@ -26,7 +26,7 @@ init -5 python in ytm_globals:
 
     # mas_gen_scrollable_menu() constants
     # (X, Y, W, H)
-    SCR_MENU_AREA = (835, 40, 440, 640)
+    SCR_MENU_AREA = (835, 40, 440, 528)
     SCR_MENU_XALIGN = -0.05
     # (prompt, return, italics, bold, offset)
     SCR_MENU_LAST_ITEMS = (
