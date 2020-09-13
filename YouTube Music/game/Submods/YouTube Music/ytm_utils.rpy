@@ -88,6 +88,56 @@ init -5 python in ytm_globals:
     # a list of played audio (youtube ids), no dupes
     audio_history = []
 
+init python in ytm_screen_utils:
+    import store
+
+    class YTMInputValue(store.InputValue):
+        """
+        Our subclass of InputValue for internal use
+        Allows us to manipulate the user input
+        For more info read renpy docs (haha yeah...docs...renpy...)
+        """
+        def __init__(self):
+            self.default = True
+            self.input_value = ""
+            self.editable = True
+            self.returnable = True
+
+        def get_text(self):
+            return self.input_value
+
+        def set_text(self, s):
+            if not isinstance(s, basestring):
+                s = unicode(s)
+            self.input_value = s
+
+    def toggleChildScreenAnimation(new_value):
+        """
+        This allows us to hide the sub-menu w/o animation
+        when we need it to just disappear immediately
+
+        IN:
+            new_value - a bool to switch the setting
+        """
+        _screen = renpy.get_screen("ytm_history_submenu")
+        if _screen:
+            _settings = _screen.scope.get("settings", None)
+            if _settings:
+                _settings["animate"] = new_value
+
+    def setParentInputValue(new_input):
+        """
+        A wrapper which allows us to do the magic in local env
+
+        IN:
+            new_input - a new value for input
+        """
+        _screen = renpy.get_screen("ytm_input_screen")
+        if _screen:
+            ytm_input = _screen.scope.get("ytm_input", None)
+            if ytm_input:
+                ytm_input.set_text(new_input)
+
 init python in ytm_utils:
     import store
     import store.ytm_globals as ytm_globals

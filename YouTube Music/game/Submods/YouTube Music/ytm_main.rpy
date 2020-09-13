@@ -10,13 +10,13 @@ init -990 python:
             "Recommended to use {a=https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste}{i}{u}Paste{/u}{/i}{/a} for copying/pasting links.\n"
             "Fully compatible with {a=https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music}{i}{u}Nightmusic{/u}{/i}{/a}."
         ),
-        version="2.5",
+        version="2.6",
         settings_pane="ytm_settings_pane",
         version_updates={}
     )
 
 # Register the updater
-init -990 python:
+init -989 python:
     if store.mas_submod_utils.isSubmodInstalled("Submod Updater Plugin"):
         store.sup_utils.SubmodUpdater(
             submod="YouTube Music",
@@ -93,19 +93,6 @@ screen ytm_settings_pane():
             text "Current track: [curr_track]"
 
 screen ytm_history_submenu(animate=True):
-    python:
-        def _setParentInputValue(new_input):
-            """
-            A wrapper which allows us to do the magic in local env
-
-            IN:
-                new_input - a new value for input
-            """
-            _screen = renpy.get_screen("ytm_input_screen")
-            if _screen:
-                ytm_input = _screen.scope.get("ytm_input")
-                ytm_input.set_text(new_input)
-
     default settings = {"animate": animate}
 
     style_prefix "scrollable_menu"
@@ -127,7 +114,7 @@ screen ytm_history_submenu(animate=True):
                         xpos 20
                         xsize 420
                         selected False
-                        action Function(_setParentInputValue, input_value)
+                        action Function(store.ytm_screen_utils.setParentInputValue, input_value)
 
         bar:
             style "classroom_vscrollbar"
@@ -135,43 +122,9 @@ screen ytm_history_submenu(animate=True):
             xalign 0.005
 
 screen ytm_input_screen(prompt):
-    python:
-        class YTMInputValue(store.InputValue):
-            """
-            Our subclass of InputValue for internal use
-            Allows us to manipulate the user input
-            For more info read renpy docs (haha yeah...docs...renpy...)
-            """
-            def __init__(self):
-                self.default = True
-                self.input_value = ""
-                self.editable = True
-                self.returnable = True
+    default ytm_input = store.ytm_screen_utils.YTMInputValue()
 
-            def get_text(self):
-                return self.input_value
-
-            def set_text(self, s):
-                if not isinstance(s, basestring):
-                    s = unicode(s)
-                self.input_value = s
-
-        def _toggleChildScreenAnimation(new_value):
-            """
-            This allows us to hide the sub-menu w/o animation
-            when we need it to just disappear immediately
-
-            IN:
-                new_value - a bool to switch the setting
-            """
-            _screen = renpy.get_screen("ytm_history_submenu")
-            if _screen:
-                _settings = _screen.scope.get("settings", {})
-                _settings["animate"] = new_value
-
-    default ytm_input = YTMInputValue()
-
-    on "hide" action Function(_toggleChildScreenAnimation, False)
+    on "hide" action Function(store.ytm_screen_utils.toggleChildScreenAnimation, False)
 
     style_prefix "input"
 
@@ -209,25 +162,20 @@ screen ytm_input_screen(prompt):
 transform ytm_menu_slide:
     crop_relative True
     yanchor 0
+
     on show:
-        alpha 0.1
+        alpha 0.0
         crop (0.0, 1.0, 1.0, 1.0)
-        easein 0.4 crop (0.0, 0.0, 1.0, 1.0) alpha 1.0
-        # parallel:
-        #     easein 0.4 crop (0.0, 0.0, 1.0, 1.0)
-        # parallel:
-        #     linear 0.45 alpha 1.0
+        parallel:
+            easein 0.2 crop (0.0, 0.0, 1.0, 1.0)
+        parallel:
+            easein 0.2 alpha 1.0
+
     on hide:
         alpha 1.0
         crop (0.0, 0.0, 1.0, 1.0)
-        easeout 0.4 crop (0.0, 1.0, 1.0, 1.0) alpha 0.1
-        # parallel:
-        #     easeout 0.4 crop (0.0, 1.0, 1.0, 1.0)
-        # parallel:
-        #     linear 0.35 alpha 0.0
-
-# Updates go here
-# label booplicate_youtube_music_v2_0(version="v2_0"):
-#     return
-# label booplicate_youtube_music_v2_1(version="v2_1"):
-#     return
+        alpha 0.0
+        parallel:
+            easeout 0.2 crop (0.0, 1.0, 1.0, 1.0)
+        parallel:
+            easeout 0.2 alpha 0.0
