@@ -30,7 +30,7 @@ label ytm_monika_introduction:
 
             "Maybe later.":
                 m 1eka "Oh, okay."
-                show monika 5hua at t11 zorder MAS_MONIKA_Z with dissolve
+                show monika 5hua at t11 zorder MAS_MONIKA_Z with dissolve_monika
                 m 5hua "Just let me know when you want to listen to something nice with your girlfriend~"
 
     else:
@@ -51,7 +51,7 @@ init 5 python:
             category=["music"],
             pool=True,
             unlocked=False,
-            rules={"no unlock": None, "bookmark_rule": store.mas_bookmarks_derand.WHITELIST},
+            rules={"no_unlock": None, "bookmark_rule": store.mas_bookmarks_derand.WHITELIST},
             aff_range=(mas_aff.NORMAL, None)
         )
     )
@@ -70,9 +70,9 @@ label ytm_monika_find_music(skip_check=False):
         ready = False
         response_quips = [
             "Anything new in your playlist?",
-            "So, what are we looking for, [player]?",
-            "What's the song's name, [player]?",
-            "What should we listen to today, [player]?",
+            "So, what are we looking for, [mas_get_player_nickname()]?",
+            "What's the song's name, [mas_get_player_nickname()]?",
+            "What should we listen to today, [mas_get_player_nickname()]?",
             "What are we listening to today?"
         ]
         response_quip = renpy.substitute(renpy.random.choice(response_quips))
@@ -177,7 +177,7 @@ label ytm_monika_find_music(skip_check=False):
                         $ ready = True
 
                 else:
-                    m 1eud "Sorry, [player]...{w=0.5}I couldn't find anything."
+                    m 1eud "Sorry, [mas_get_player_nickname(regex_replace_with_nullstr='my ')]...{w=0.5}I couldn't find anything."
                     m 3eua "Do you want to try again?{nw}"
                     $ _history_list.pop()
                     menu:
@@ -201,6 +201,7 @@ label ytm_monika_find_music(skip_check=False):
     return
 
 label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=True):
+    show monika 1dsa
     window hide
     $ ytm_threading.updateThreadArgs(ytm_threading.get_audio_info, [url])
     call ytm_get_audio_info_loop
@@ -224,17 +225,16 @@ label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=T
 
             if ytm_utils.playAudio(ytm_globals.SHORT_MUSIC_DIRECTORY + audio_info["ID"] + ytm_globals.EXTENSION, name=audio_info["TITLE"]):
                 m 1hua "There we go!"
-                # m "Playing it w/o downloading again! Good job, [player]!"
+
             else:
-                m 1ekd "Oh no...{w=0.5}something went wrong, [player]..."
+                m 1ekd "Oh no...{w=0.5}something went wrong, [mas_get_player_nickname(regex_replace_with_nullstr='my ')]..."
                 m 1euc "I'm sure we listened to this song before, but I can't seem to find it anymore..."
                 m 1eka "Let's try again later, alright?"
 
         else:
             if ytm_utils.shouldCacheFirst(audio_info["SIZE"]):
                 m 3eub "We'll need to wait for a bit."
-                m 1hua "I hope you don't mind, [player]~"
-                # m "Soon we'll finish caching it and I'll queue it."
+                m 1hua "I hope you don't mind, [mas_get_player_nickname()]~"
                 $ ytm_threading.resetThread(ytm_threading.cache_audio_from_url)
                 $ ytm_threading.updateThreadArgs(
                     ytm_threading.cache_audio_from_url,
@@ -257,7 +257,6 @@ label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=T
 
                 if _return:
                     m 1hua "There we go!"
-                    # m "We quickly cached it and then queued, [player]."
                     $ ytm_threading.resetThread(ytm_threading.cache_audio_from_ram)
                     $ ytm_threading.updateThreadArgs(
                         ytm_threading.cache_audio_from_ram,
@@ -274,6 +273,7 @@ label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=T
         m 1ekc "I can't play this song right now."
         m 1eka "Let's try again later, okay?"
 
+    window auto
     $ ready = True
     $ del[audio_info]
     return
@@ -302,7 +302,7 @@ label ytm_monika_finished_caching_audio:
         if renpy.random.randint(1, 20) == 1:
             $ current_time = datetime.datetime.now().time()
 
-            show monika 5eubla at t11 zorder MAS_MONIKA_Z with dissolve
+            show monika 5eubla at t11 zorder MAS_MONIKA_Z with dissolve_monika
             if mas_isAnytoMN(current_time, 17, 45):
                 m 5eubla "Let's have another nice evening together~"
 
