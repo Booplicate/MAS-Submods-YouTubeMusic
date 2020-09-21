@@ -22,7 +22,7 @@ init -5 python in ytm_globals:
     has_connection = None
 
     # Maximum search results
-    SEARCH_LIMIT = 50
+    SEARCH_LIMIT = 99
 
     # mas_gen_scrollable_menu() constants
     # (X, Y, W, H)
@@ -416,7 +416,6 @@ init python in ytm_utils:
     def clearHTML(html):
         """
         Tries to clear html up from weird symbol and encodings
-        NOTE: Won't rise exceptions even if it fails.
 
         IN:
             html - dirty html data that we're clearing
@@ -489,8 +488,7 @@ init python in ytm_utils:
                 ):
                     videos_info.append(
                         (
-                            # NOTE: this might be faster than regex
-                            title.replace("[", "[[").replace("{", "{{").replace("\\\"", "\""),
+                            title.replace("[", "[[").replace("{", "{{").replace("\\\"", "\"").encode(errors="replace"),
                             ytm_globals.YOUTUBE + url
                         )
                     )
