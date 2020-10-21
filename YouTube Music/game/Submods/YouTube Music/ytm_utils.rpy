@@ -1,17 +1,21 @@
 
-# # # Make sure we have a place to store our cache
+# # # Startup checks
 
 init 50 python:
     import os
 
+    # Make the folders if needed
     if not os.path.isdir(ytm_globals.YT_SIG_DIRECTORY):
         try:
             os.makedirs(ytm_globals.YT_SIG_DIRECTORY)
 
         except Exception as e:
-            # There's nothing that can create the folder during this
-            # Which means it has to be a perm issue
-            store.ytm_utils.writeLog("Missing folder. Failed to create folder.", e)
+            # There's nothing that would create the folder now,
+            # which means it has to be a perm issue
+            store.ytm_utils.writeLog("Missing the cache folder. Failed to create a folder.", e)
+
+    # Check connection on startup
+    ytm_utils.isOnline()
 
 # # # "GLOBALS" STUFF
 

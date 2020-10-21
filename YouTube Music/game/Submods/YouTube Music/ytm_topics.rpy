@@ -26,7 +26,7 @@ label ytm_monika_introduction:
 
             "Sure.":
                 m 1hua "Yay!"
-                call ytm_monika_find_music(skip_check=True)
+                call ytm_monika_find_music
 
             "Maybe later.":
                 m 1eka "Oh, okay."
@@ -56,15 +56,14 @@ init 5 python:
         )
     )
 
-label ytm_monika_find_music(skip_check=False):
-    if not skip_check:
-        if ytm_utils.isOnline():
-            if not ytm_globals.is_playing:
-                m 1eub "Of course!"
-        else:
-            m 1rksdla "..."
-            m 1rksdlb "We need an internet connection to listen to music online, [player]..."
-            return
+label ytm_monika_find_music:
+    if ytm_utils.isOnline():
+        if not ytm_globals.is_playing:
+            m 1eub "Of course!"
+    else:
+        m 1rksdla "..."
+        m 1rksdlb "We need an internet connection to listen to music online, [player]..."
+        return
 
     python:
         ready = False
@@ -82,14 +81,14 @@ label ytm_monika_find_music(skip_check=False):
     while not ready:
         show monika 1eua at t11
         $ raw_search_request = mas_input(
-            "You can tell me its name or give me a direct link.",
+            "[response_quip]",
             length=80,
             screen="ytm_input_screen"
         ).strip('\t\n\r')
         $ lower_search_request = raw_search_request.lower()
 
         if lower_search_request == "":
-            if not ytm_globals.is_playing:
+            if not ytm_globals.is_playing or renpy.music.get_pause():
                 m 1eka "Oh...{w=0.2} I really would like to listen to music with you!"
                 m 1eub "Let me know when you have time~"
 
