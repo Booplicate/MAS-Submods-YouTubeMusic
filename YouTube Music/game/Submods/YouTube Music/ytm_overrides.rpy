@@ -4,6 +4,7 @@ init 100:
     # General overrides
     python:
         store.mas_submod_utils.registerFunction("quit", ytm_utils.cleanUp)
+        store.mas_submod_utils.registerFunction("mas_o31_autoload_check", ytm_utils.check_o31_spook)
         store.songs.PAUSE = "Pause"
         store.songs.UNPAUSE = "Play"
         store.songs.FP_PAUSE = "pause"

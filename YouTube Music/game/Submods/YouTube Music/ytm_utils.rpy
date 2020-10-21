@@ -57,7 +57,7 @@ init -5 python in ytm_globals:
     }
 
     PARSE_PATTERN_SCRIPT_BLOCK = re.compile(
-        r"(?:window\[\"ytInitialData\"\])(.+?)(?:window\[\"ytInitialPlayerResponse\"\])",
+        r"(?:window\[\"ytInitialData\"\]|scraper_data_begin)(.+?)(?:window\[\"ytInitialPlayerResponse\"\]|scraper_data_end)",
         re.DOTALL
     )
     PARSE_PATTERN_VIDEO = re.compile(
@@ -161,10 +161,14 @@ init python in ytm_utils:
             e - exception
                 (Default: None)
         """
-        if e is None:
-            e = "Unknown"
+        if e is not None:
+            e = " Exception: {0}".format(e)
+
+        else:
+            e = ""
+
         store.mas_utils.writelog(
-            "[YTM ERROR]: {0} Exception: {1}\n".format(
+            "[YTM ERROR]: {0}{1}.\n".format(
                 msg,
                 e
             )
@@ -497,6 +501,15 @@ init python in ytm_utils:
                     if total_songs >= ytm_globals.SEARCH_LIMIT:
                         return videos_info
 
+        else:
+            import time
+            timestamp = str(int(time.time()))
+            path = renpy.config.basedir.replace("\\", "/")
+            name = "html_" + timestamp + ".ytm_log"
+            with open(path + "/" + name, "w") as html_file:
+                html_file.write(html)
+            writeLog("Failed to scrape an HTML, the HTML was saved as '{0}' in '{1}'. Please, send it to the developer of this submod.".format(name, path))
+
         return videos_info
 
     def buildMenuList(videos_info):
@@ -803,7 +816,7 @@ init python in ytm_utils:
 
         return True
 
-    def playAudio(audio, name=None, clear_queue=True, channel="music"):
+    def playAudio(audio, name=None, loop=True, clear_queue=True, fadein=2, set_ytm_flag=True):
         """
         Plays audio files/data
 
@@ -811,16 +824,20 @@ init python in ytm_utils:
             audio - an audio file (can be a list of files too)
             name - the name of the audio. If None, 'YouTube Music' will be used
                 (Default: None)
+            loop - whether or not we loop this track
+                (Default: True)
             clear_queue - True clears the queue and play audio, False adds to the the end
                 (Default: True)
-            channel - the RenPy audio channel we will play the audio in
-                (Default: "music")
+            fadein - fadein for this track in seconds
+                (Default: 2)
+            set_ytm_flag - whether or not we set the flag that youtube music is playing something
+                (Default: True)
 
         OUT:
             True if we were able to play the audio, False otherwise
         """
         if clear_queue:
-            renpy.music.stop(channel, 2)
+            renpy.music.stop("music", 2)
             if name is not None:
                 store.songs.current_track = name
             else:
@@ -831,10 +848,10 @@ init python in ytm_utils:
         try:
             renpy.music.queue(
                 filenames=audio,
-                channel=channel,
-                loop=True,
+                channel="music",
+                loop=loop,
                 clear_queue=clear_queue,
-                fadein=2,
+                fadein=fadein,
                 tight=False
             )
 
@@ -843,7 +860,7 @@ init python in ytm_utils:
             return False
 
         else:
-            ytm_globals.is_playing = True
+            ytm_globals.is_playing = set_ytm_flag
             return True
 
         finally:
@@ -851,6 +868,43 @@ init python in ytm_utils:
                 store.persistent._seen_audio.pop(audio)
             except:
                 pass
+
+    def check_o31_spook():
+        """
+        Checks whether or not we should play an into track for o31
+        NOTE: runtime only
+        """
+        if (
+            store.mas_isO31()
+            and not store.persistent._mas_o31_in_o31_mode
+            # and store.persistent._mas_pm_likes_spoops
+            and store.persistent.current_track == store.songs.FP_NO_SONG
+            and renpy.music.get_playing() is None
+            and not store.songs.hasMusicMuted()
+            and store.mas_isMoniHappy(higher=True)
+            and store.mas_getEVL_shown_count("ytm_monika_find_music", 0) > 5
+        ):
+            from threading import Thread
+            spook_thread = Thread(target=_do_o31_spook)
+            spook_thread.daemon = True
+            spook_thread.start()
+
+    def _do_o31_spook():
+        """
+        This mean function spooks you and takes all your candies
+        """
+        # Credits to T.L.B. Orchestration
+        audio_info = getAudioInfo("https://youtu.be/J7XtCHxVUto")
+        if audio_info:
+            cache = cacheDataToRAM(audio_info["URL"], audio_info["SIZE"])
+            if cache:
+                playAudio(
+                    bytesToAudioData(cache, "Spook~"),
+                    name="Spook~",
+                    loop=False,
+                    fadein=30,
+                    set_ytm_flag=False
+                )
 
 # # # THREADING STUFF
 
@@ -949,7 +1003,7 @@ init 5 python in ytm_threading:
         if cache:
             ytm_globals.audio_to_queue["TITLE"] = title
             # NOTE: The play function uses short paths so we need to cut a part of the path here
-            ytm_globals.audio_to_queue["PATH"] = directory.split(renpy.config.gamedir.replace("\\", "/"), 1)[1]
+            ytm_globals.audio_to_queue["PATH"] = directory.split(ytm_globals.GAME_DIR, 1)[1]
             store.pushEvent("ytm_monika_finished_caching_audio")
             return True
         # got an exception somewhere
