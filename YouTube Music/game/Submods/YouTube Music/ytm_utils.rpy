@@ -153,6 +153,8 @@ init python in ytm_utils:
     from bs4 import UnicodeDammit
     from HTMLParser import HTMLParser
     # from json import load as to_json
+    from time import time
+    from threading import Thread
 
 # # # UTIL STUFF
 
@@ -506,8 +508,7 @@ init python in ytm_utils:
                         return videos_info
 
         else:
-            import time
-            timestamp = str(int(time.time()))
+            timestamp = str(int(time()))
             path = renpy.config.basedir.replace("\\", "/")
             name = "html_" + timestamp + ".ytm_log"
             with open(path + "/" + name, "w") as html_file:
@@ -887,8 +888,8 @@ init python in ytm_utils:
             and not store.songs.hasMusicMuted()
             and store.mas_isMoniHappy(higher=True)
             and store.mas_getEVL_shown_count("ytm_monika_find_music", 0) > 5
+            and isOnline()
         ):
-            from threading import Thread
             spook_thread = Thread(target=_do_o31_spook)
             spook_thread.daemon = True
             spook_thread.start()
@@ -897,16 +898,19 @@ init python in ytm_utils:
         """
         This mean function spooks you and takes all your candies
         """
+        start_ts = time()
         # Credits to T.L.B. Orchestration
         audio_info = getAudioInfo("https://youtu.be/J7XtCHxVUto")
         if audio_info:
             cache = cacheDataToRAM(audio_info["URL"], audio_info["SIZE"])
-            if cache:
+            end_ts = time()
+            d_t = end_ts - start_ts
+            if cache and d_t < 15:
                 playAudio(
                     bytesToAudioData(cache, "Spook~"),
                     name="Spook~",
                     loop=False,
-                    fadein=30,
+                    fadein=10,
                     set_ytm_flag=False
                 )
 
