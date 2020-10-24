@@ -38,4 +38,4 @@ DDLC/game/
 Monika will tell you everything in the game, just install the submod and launch the game. After her intro you can find the topic in the Music category. You can bookmark the topic by pressing `b` during the conversation.
 
 ## Limitations:
-RenPy doesn't support live-streams, and quick bad handles playlists. Hence those require a lot of changes to the audio system.
+RenPy doesn't support live-streams, and quite bad handles playlists. Hence those require a lot of changes to the audio system.
