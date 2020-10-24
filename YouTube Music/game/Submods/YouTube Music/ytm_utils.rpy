@@ -28,6 +28,9 @@ init -5 python in ytm_globals:
     # Maximum search results
     SEARCH_LIMIT = 99
 
+    # The number of attempts to request audio streams before giving up
+    STREAM_REQUEST_ATTEMPTS = 3
+
     # mas_gen_scrollable_menu() constants
     # (X, Y, W, H)
     SCR_MENU_AREA = (835, 40, 440, 528)
@@ -76,6 +79,15 @@ init -5 python in ytm_globals:
     YT_SIG_DIRECTORY = FULL_MUSIC_DIRECTORY + "/youtube-sigfuncs/"
     # Cache extension
     EXTENSION = ".cache"
+
+    # Params for yt-dl (pass in in pafy obj as ydl_opts)
+    # NOTE: these might be interesting:
+    #   nocheckcertificate
+    #   prefer_insecure
+    YDL_OPTS = {
+        "cachedir": FULL_MUSIC_DIRECTORY,# Redirect the cache to our folder
+        "verbose": True# We want to get full tracebacks
+    }
 
     # Did we just start a loop or we're continuing looping?
     first_pass = True
@@ -619,15 +631,24 @@ init python in ytm_utils:
             dict with the title, id, link to the audio stream and its size
             or None if we got an exception
         """
-        try:
-            video = pafy.new(
-                url=url,
-                ydl_opts={"cachedir": ytm_globals.FULL_MUSIC_DIRECTORY}
-            )
-            stream = video.getbestaudio(preftype="webm")
-        except Exception as e:
-            writeLog("Failed to request audio stream.", e)
-            return None
+        tries = ytm_globals.STREAM_REQUEST_ATTEMPTS
+        while tries > 0:
+            tries -= 1
+            try:
+                video = pafy.new(
+                    url=url,
+                    ydl_opts=ytm_globals.YDL_OPTS
+                )
+                stream = video.getbestaudio(preftype="webm")
+
+            except Exception as e:
+                writeLog("Failed to request audio stream.", e)
+                if tries <= 0:
+                    return None
+
+            else:
+                # If we got the stream w/o exceptions, break the loop
+                tries = 0
 
         # sanity check
         # when trying to get the stream for a live stream, pafy will return None
@@ -637,10 +658,15 @@ init python in ytm_utils:
 
         # fix stream if youtube fooked up
         if isBadStream(stream):
-            # NOTE: Technically we can get False instead of the URL
+            # NOTE: Technically we can get None instead of the URL
             url_to_audio = fixStreamURL(stream)
+
         else:
             url_to_audio = stream.url
+
+        if url_to_audio is None:
+            writeLog("Failed to get the URL to the audio stream.")
+            return None
 
         # make a request
         request = urllib2.Request(
@@ -654,6 +680,7 @@ init python in ytm_utils:
             content_size = int(
                 urllib2.urlopen(request, timeout=15).info().getheaders("Content-Length")[0]
             )
+
         except Exception as e:
             writeLog("Failed to request content size.", e)
             return None
