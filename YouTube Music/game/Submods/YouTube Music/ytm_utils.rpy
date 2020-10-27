@@ -29,7 +29,7 @@ init -5 python in ytm_globals:
     SEARCH_LIMIT = 99
 
     # The number of attempts to request audio streams before giving up
-    STREAM_REQUEST_ATTEMPTS = 3
+    STREAM_REQUEST_ATTEMPTS = 5
 
     # mas_gen_scrollable_menu() constants
     # (X, Y, W, H)
@@ -181,12 +181,14 @@ init python in ytm_utils:
         """
         if e is not None:
             e = " Exception: {0}".format(e)
+            if not e.endswith("."):
+                e += "."
 
         else:
             e = ""
 
         store.mas_utils.writelog(
-            "[YTM ERROR]: {0}{1}.\n".format(
+            "[YTM ERROR]: {0}{1}\n".format(
                 msg,
                 e
             )
@@ -632,6 +634,7 @@ init python in ytm_utils:
             or None if we got an exception
         """
         tries = ytm_globals.STREAM_REQUEST_ATTEMPTS
+        err_types = set()
         while tries > 0:
             tries -= 1
             try:
@@ -642,7 +645,11 @@ init python in ytm_utils:
                 stream = video.getbestaudio(preftype="webm")
 
             except Exception as e:
-                writeLog("Failed to request audio stream.", e)
+                _type = type(e)
+                if _type not in err_types:
+                    err_types.add(_type)
+                    writeLog("Failed to request audio stream.", e)
+
                 if tries <= 0:
                     return None
 

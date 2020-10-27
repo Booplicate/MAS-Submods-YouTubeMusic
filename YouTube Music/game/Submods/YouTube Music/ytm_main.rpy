@@ -10,7 +10,7 @@ init -990 python:
             "Recommended to use {a=https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste}{i}{u}Paste{/u}{/i}{/a} for copying/pasting links.\n"
             "Fully compatible with {a=https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music}{i}{u}Nightmusic{/u}{/i}{/a}."
         ),
-        version="2.6",
+        version="2.7",
         settings_pane="ytm_settings_pane",
         version_updates={}
     )
