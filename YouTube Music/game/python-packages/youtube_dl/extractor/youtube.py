@@ -2050,11 +2050,13 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
 
                 if cipher:
                     if 's' in url_data or self._downloader.params.get('youtube_include_dash_manifest', True):
-                        ASSETS_RE = r'"assets":.+?"js":\s*("[^"]+")'
+                        ASSETS_RE = r'(?:"PLAYER_JS_URL"|"assets":.+?"js"):\s*("[^"]+")'
                         jsplayer_url_json = self._search_regex(
                             ASSETS_RE,
                             embed_webpage if age_gate else video_webpage,
-                            'JS player URL (1)', default=None)
+                            'JS player URL (1)',
+                            default=None
+                        )
                         if not jsplayer_url_json and not age_gate:
                             # We need the embed website after all
                             if embed_webpage is None:
@@ -2062,7 +2064,10 @@ class YoutubeIE(YoutubeBaseInfoExtractor):
                                 embed_webpage = self._download_webpage(
                                     embed_url, video_id, 'Downloading embed webpage')
                             jsplayer_url_json = self._search_regex(
-                                ASSETS_RE, embed_webpage, 'JS player URL')
+                                ASSETS_RE,
+                                embed_webpage,
+                                'JS player URL'
+                            )
 
                         player_url = json.loads(jsplayer_url_json)
                         if player_url is None:
