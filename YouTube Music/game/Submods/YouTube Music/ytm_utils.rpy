@@ -37,8 +37,8 @@ init -5 python in ytm_globals:
     SCR_MENU_XALIGN = -0.05
     # (prompt, return, italics, bold, offset)
     SCR_MENU_LAST_ITEMS = (
-        ("I changed my mind.", "_changed_mind", False, False, 20),
-        ("I want to find another song.", "_another_song", False, False, 0)
+        ("I want to find another song.", "_another_song", False, False, 20),
+        ("I changed my mind.", "_changed_mind", False, False, 0),
     )
 
     # Maximum audio size to play from RAM (bytes)
@@ -63,10 +63,10 @@ init -5 python in ytm_globals:
         "Accept-Charset": "utf8"
     }
 
-    PARSE_PATTERN_SCRIPT_BLOCK = re.compile(
-        r"(?:window\[\"ytInitialData\"\]|scraper_data_begin)(.+?)(?:window\[\"ytInitialPlayerResponse\"\]|scraper_data_end)",
-        re.DOTALL
-    )
+    # PARSE_PATTERN_SCRIPT_BLOCK = re.compile(
+    #     r"(?:var\s+ytInitialData\s*=\s*|window\[\"ytInitialData\"\]|scraper_data_begin)(.+?)(?:ytInitialPlayerResponse|window\[\"ytInitialPlayerResponse\"\]|scraper_data_end)",
+    #     re.DOTALL
+    # )
     PARSE_PATTERN_VIDEO = re.compile(
         r"(?:},\"title\":{\"runs\":\[{\"text\":\")(.+?)(?:\"}\],\"accessibility\":)(?:.+?)(?:\"webCommandMetadata\":{\"url\":\"/)(watch\?v=[-_0-9a-zA-Z]{11})(?:\",\"webPageType\":\"WEB_PAGE_TYPE_WATCH\")"
     )
@@ -86,7 +86,8 @@ init -5 python in ytm_globals:
     #   prefer_insecure
     YDL_OPTS = {
         "cachedir": FULL_MUSIC_DIRECTORY,# Redirect the cache to our folder
-        "verbose": True# We want to get full tracebacks
+        "verbose": True,# We want to get full tracebacks
+        "user-agent": "Just Monika! (Monika After Story v{0})".format(renpy.config.version),
     }
 
     # Did we just start a loop or we're continuing looping?
@@ -187,7 +188,7 @@ init python in ytm_utils:
         else:
             e = ""
 
-        store.mas_utils.writelog(
+        store.mas_submod_utils.writelog(
             "[YTM ERROR]: {0}{1}\n".format(
                 msg,
                 e
@@ -474,7 +475,6 @@ init python in ytm_utils:
             writeLog("Failed to parse html data. Bad encoding?", e)
             return videos_info
 
-        # OUTDATED
         # for data in bs.find_all("a", {"class":"yt-uix-tile-link yt-ui-ellipsis yt-ui-ellipsis-2 yt-uix-sessionlink"}):
         #     # damn youtube's mixes
         #     if (
@@ -494,17 +494,11 @@ init python in ytm_utils:
         #         if total >= limit:
         #             break
 
-        # I'm not gonna do this shit, youtube. No way.
-        # jdata["contents"]["twoColumnSearchResultsRenderer"]["primaryContents"]["sectionListRenderer"]["contents"][0]["itemSectionRenderer"]["contents"][-2]["videoRenderer"]["title"]["runs"][0]["text"]
-
         # get the block of html we need
-        script_block = re.search(ytm_globals.PARSE_PATTERN_SCRIPT_BLOCK, html)
         total_songs = 0
-
-        if script_block is not None:
-            # get pairs of title + url
-            data = re.findall(ytm_globals.PARSE_PATTERN_VIDEO, script_block.group())
-
+        # get pairs of title + url
+        data = re.findall(ytm_globals.PARSE_PATTERN_VIDEO, html)
+        if data is not None:
             for title, url in data:
                 if (
                     title is not None
@@ -521,13 +515,13 @@ init python in ytm_utils:
                     if total_songs >= ytm_globals.SEARCH_LIMIT:
                         return videos_info
 
-        else:
-            timestamp = str(int(time()))
-            path = renpy.config.basedir.replace("\\", "/")
-            name = "html_" + timestamp + ".ytm_log"
-            with open(path + "/" + name, "w") as html_file:
-                html_file.write(html)
-            writeLog("Failed to scrape an HTML, the HTML was saved as '{0}' in '{1}'. Please, send it to the developer of this submod.".format(name, path))
+        # else:
+        #     timestamp = str(int(time()))
+        #     path = renpy.config.basedir.replace("\\", "/") + "/log/"
+        #     name = "ytm_html_log_" + timestamp + ".log"
+        #     with open(path + name, "w") as html_file:
+        #         html_file.write(html)
+        #     writeLog("Failed to scrape an HTML, the HTML was saved as '{0}' in '{1}'. Please, send it to the developer of this submod.".format(name, path))
 
         return videos_info
 

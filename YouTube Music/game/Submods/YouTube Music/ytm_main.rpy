@@ -101,7 +101,7 @@ screen ytm_history_submenu(animate=True):
         if settings["animate"]:
             at ytm_menu_slide
 
-        area (410, 315, 440, 220)
+        area (410, 348, 440, 220)
 
         viewport:
             id "viewport"
@@ -123,30 +123,32 @@ screen ytm_history_submenu(animate=True):
 
 screen ytm_input_screen(prompt):
     default ytm_input = store.ytm_screen_utils.YTMInputValue()
+    default blank_history = bool(store.ytm_globals.search_history)
 
     on "hide" action Function(store.ytm_screen_utils.toggleChildScreenAnimation, False)
 
     style_prefix "input"
 
     window:
-        vbox:
-            align (0.5, 0.5)
-            spacing 5
-            ypos -263
-            style_prefix "choice"
+        hbox:
+            style_prefix "quick"
+            xfill blank_history
+            xmaximum (None if not blank_history else 232)
+            xalign 0.5
+            yalign 0.995
 
-            textbutton _("Nevermind."):
+            textbutton _("Nevermind"):
                 selected False
                 action Return("")
 
             if store.ytm_globals.search_history:
                 if renpy.get_screen("ytm_history_submenu") is None:
-                    textbutton _("Previous tracks."):
+                    textbutton _("Show previous tracks"):
                         selected False
                         action ShowTransient("ytm_history_submenu")
 
                 else:
-                    textbutton _("Hide."):
+                    textbutton _("Hide previous tracks"):
                         selected False
                         action Hide("ytm_history_submenu")
 
@@ -165,17 +167,16 @@ transform ytm_menu_slide:
 
     on show:
         alpha 0.0
-        crop (0.0, 1.0, 1.0, 1.0)
+        crop (1.0, 0.0, 1.0, 1.0)
         parallel:
-            easein 0.2 crop (0.0, 0.0, 1.0, 1.0)
+            easein 0.1 crop (0.0, 0.0, 1.0, 1.0)
         parallel:
-            easein 0.2 alpha 1.0
+            easein 0.1 alpha 1.0
 
     on hide:
         alpha 1.0
         crop (0.0, 0.0, 1.0, 1.0)
-        alpha 0.0
         parallel:
-            easeout 0.2 crop (0.0, 1.0, 1.0, 1.0)
+            easeout 0.1 crop (1.0, 0.0, 1.0, 1.0)
         parallel:
-            easeout 0.2 alpha 0.0
+            easeout 0.1 alpha 0.0
