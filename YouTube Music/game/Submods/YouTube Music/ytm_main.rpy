@@ -10,7 +10,7 @@ init -990 python:
             "Recommended to use {a=https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste}{i}{u}Paste{/u}{/i}{/a} for copying/pasting links.\n"
             "Fully compatible with {a=https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music}{i}{u}Nightmusic{/u}{/i}{/a}."
         ),
-        version="2.7",
+        version="2.8",
         settings_pane="ytm_settings_pane",
         version_updates={}
     )
@@ -33,17 +33,14 @@ screen ytm_settings_pane():
 
         if submods_screen:
             _tooltip = submods_screen.scope.get("tooltip", None)
-
         else:
             _tooltip = None
 
         # connection
         if store.ytm_globals.has_connection is True:
             connection = "Online"
-
         elif store.ytm_globals.has_connection is False:
             connection = "Offline"
-
         else:
             connection = "Unknown"
 
@@ -53,13 +50,10 @@ screen ytm_settings_pane():
             and store.songs.current_track
         ):
             curr_track = store.songs.current_track
-
         elif store.songs.current_track == "nightmusic":
             curr_track = "Monika's choice~"
-
         elif store.songs.current_track:
             curr_track = store.songs.current_track.split("/")[-1].split(".")[0]
-
         else:
             curr_track = None
 
@@ -105,7 +99,6 @@ screen ytm_history_submenu(animate=True):
 
         viewport:
             id "viewport"
-            yfill False
             mousewheel True
 
             vbox:
@@ -118,12 +111,13 @@ screen ytm_history_submenu(animate=True):
 
         bar:
             style "classroom_vscrollbar"
+            unscrollable "insensitive"
             value YScrollValue("viewport")
             xalign 0.005
 
 screen ytm_input_screen(prompt):
     default ytm_input = store.ytm_screen_utils.YTMInputValue()
-    default blank_history = bool(store.ytm_globals.search_history)
+    default has_history = bool(store.ytm_globals.search_history)
 
     on "hide" action Function(store.ytm_screen_utils.toggleChildScreenAnimation, False)
 
@@ -132,8 +126,8 @@ screen ytm_input_screen(prompt):
     window:
         hbox:
             style_prefix "quick"
-            xfill blank_history
-            xmaximum (None if not blank_history else 232)
+            xfill has_history
+            xmaximum (None if not has_history else 232)
             xalign 0.5
             yalign 0.995
 
@@ -141,7 +135,7 @@ screen ytm_input_screen(prompt):
                 selected False
                 action Return("")
 
-            if store.ytm_globals.search_history:
+            if has_history:
                 if renpy.get_screen("ytm_history_submenu") is None:
                     textbutton _("Show previous tracks"):
                         selected False
@@ -167,7 +161,7 @@ transform ytm_menu_slide:
 
     on show:
         alpha 0.0
-        crop (1.0, 0.0, 1.0, 1.0)
+        crop (0.0, -1.0, 1.0, 1.0)
         parallel:
             easein 0.1 crop (0.0, 0.0, 1.0, 1.0)
         parallel:
@@ -177,6 +171,6 @@ transform ytm_menu_slide:
         alpha 1.0
         crop (0.0, 0.0, 1.0, 1.0)
         parallel:
-            easeout 0.1 crop (1.0, 0.0, 1.0, 1.0)
+            easeout 0.1 crop (0.0, -1.0, 1.0, 1.0)
         parallel:
             easeout 0.1 alpha 0.0
