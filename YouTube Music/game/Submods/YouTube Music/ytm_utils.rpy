@@ -188,7 +188,7 @@ init python in ytm_utils:
         else:
             e = ""
 
-        store.mas_submod_utils.writelog(
+        store.mas_submod_utils.writeLog(
             "[YTM ERROR]: {0}{1}\n".format(
                 msg,
                 e
