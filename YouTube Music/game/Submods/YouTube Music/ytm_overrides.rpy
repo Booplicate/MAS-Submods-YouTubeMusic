@@ -393,6 +393,7 @@ init -999 python:
 # AudioData support for RenPy 6.99.12
 python early:
     import io
+    import os
 
     class AudioData(unicode):
         """
@@ -573,3 +574,35 @@ python early:
             self.paused = want_pause
 
     renpy.audio.audio.Channel.periodic = ytm_periodic_override
+
+    @property
+    def ytm_stdio_redirector_encoding(self):
+        """
+        Implements the encoding property because one lazy bastard decided not to smh
+        """
+        if hasattr(self.real_file, "encoding"):
+            return self.real_file.encoding
+        return None
+
+    def ytm_stdio_redirector_isatty(self):
+        """
+        Implements the isatty method because one lazy bastard decided not to smh
+        """
+        if hasattr(self.real_file, "isatty"):
+            return self.real_file.isatty()
+        return NotImplemented
+
+    def ytm_stdio_redirector_fileno(self):
+        """
+        Implements the fileno method because one lazy bastard decided not to smh
+        """
+        if hasattr(self.real_file, "fileno"):
+            return self.real_file.fileno()
+        return NotImplemented
+
+    if not "RENPY_NO_REDIRECT_STDIO" in os.environ:
+        # This only relevant to r7
+        if hasattr(renpy.exports.renpy.log, "StdioRedirector"):
+            renpy.exports.renpy.log.StdioRedirector.encoding = ytm_stdio_redirector_encoding
+            renpy.exports.renpy.log.StdioRedirector.isatty = ytm_stdio_redirector_isatty
+            renpy.exports.renpy.log.StdioRedirector.fileno = ytm_stdio_redirector_fileno

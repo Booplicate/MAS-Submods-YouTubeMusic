@@ -86,7 +86,8 @@ init -5 python in ytm_globals:
     #   prefer_insecure
     YDL_OPTS = {
         "cachedir": FULL_MUSIC_DIRECTORY,# Redirect the cache to our folder
-        "verbose": True,# We want to get full tracebacks
+        # "verbose": True,# We want to get full tracebacks
+        "quiet": True,# RenPy has broken stdio
         "user-agent": "Just Monika! (Monika After Story v{0})".format(renpy.config.version),
     }
 
