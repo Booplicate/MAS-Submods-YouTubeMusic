@@ -78,7 +78,7 @@ label ytm_monika_find_music:
 
     m 1eua "[response_quip]"
 
-    while not ready:
+    label .input_loop:
         show monika 1eua at t11
         $ raw_search_request = mas_input(
             "[response_quip]",
@@ -89,12 +89,11 @@ label ytm_monika_find_music:
 
         if lower_search_request == "":
             if not ytm_globals.is_playing or renpy.music.get_pause():
-                m 1eka "Oh...{w=0.2} I really would like to listen to music with you!"
+                m 1eka "Oh...{w=0.2}I really would like to listen to music with you!"
                 m 1eub "Let me know when you have time~"
 
             else:
                 m 1eka "Oh, okay."
-            $ ready = True
 
         else:
             if ytm_utils.isYouTubeURL(raw_search_request):
@@ -118,6 +117,8 @@ label ytm_monika_find_music:
                 # else:
                 show monika 1dsa at t11
                 call .ytm_process_audio_info(raw_search_request, add_to_search_hist=True)
+                if not _return:
+                    jump .input_loop
 
             else:
                 $ ytm_utils.addSearchHistory(
@@ -146,57 +147,53 @@ label ytm_monika_find_music:
 
                 $ ytm_threading.updateThreadArgs(ytm_threading.search_music, [raw_search_request])
                 call ytm_search_loop
-                $ menu_list = ytm_utils.buildMenuList(_return)
+                $ menu_list = _return
 
-                if len(menu_list) > 0:
-                    m 1eub "Alright! Look what I've found!"
-                    show monika 1eua at t21
-                    call screen mas_gen_scrollable_menu(menu_list, ytm_globals.SCR_MENU_AREA, ytm_globals.SCR_MENU_XALIGN, *ytm_globals.SCR_MENU_LAST_ITEMS)
-                    show monika at t11
+                label .menu_display:
+                    if len(menu_list) > 0:
+                        m 1eub "Alright! Look what I've found!"
+                        show monika 1eua at t21
+                        call screen mas_gen_scrollable_menu(menu_list, ytm_globals.SCR_MENU_AREA, ytm_globals.SCR_MENU_XALIGN, *ytm_globals.SCR_MENU_LAST_ITEMS)
+                        show monika at t11
 
-                    if "https" in _return:
-                        call .ytm_process_audio_info(_return)
+                        if "https" in _return:
+                            call .ytm_process_audio_info(_return)
+                            if not _return:
+                                jump .menu_display
 
-                    elif _return == "_changed_mind":
-                        if not ytm_globals.is_playing:
-                            m 1eka "Oh... {w=0.2}{nw}"
-                            extend 3ekb "I really love to listen to music with you!"
-                            m 1eua "Let me know when you have time~"
+                        elif _return == "_changed_mind":
+                            if not ytm_globals.is_playing:
+                                m 1eka "Oh...{w=0.2}{nw}"
+                                extend 3ekb "I really love to listen to music with you!"
+                                m 1eua "Let me know when you have time~"
+                            else:
+                                m 1eka "Oh, okay."
+
+                        elif _return == "_another_song":
+                            m 1eub "Alright!"
+                            jump .input_loop
+
                         else:
-                            m 1eka "Oh, okay."
-                        $ ready = True
-
-                    elif _return == "_another_song":
-                        m 1eub "Alright!"
+                            # aka the part you will never get to
+                            m 2tfu "{cps=*2}Reading this doesn't seem like the best use of your time, [player].{/cps}{nw}"
+                            $ _history_list.pop()
 
                     else:
-                        # aka the part you will never get to
-                        m 2tfu "{cps=*2}Reading this doesn't seem like the best use of your time, [player].{/cps}{nw}"
+                        m 1eud "Sorry, [mas_get_player_nickname(regex_replace_with_nullstr='my ')]...{w=0.5}I couldn't find anything."
+                        m 3eua "Do you want to try again?{nw}"
                         $ _history_list.pop()
-                        $ ready = True
+                        menu:
+                            m "Do you want to try again?{fast}"
 
-                else:
-                    m 1eud "Sorry, [mas_get_player_nickname(regex_replace_with_nullstr='my ')]...{w=0.5}I couldn't find anything."
-                    m 3eua "Do you want to try again?{nw}"
-                    $ _history_list.pop()
-                    menu:
-                        m "Do you want to try again?{fast}"
+                            "Yes.":
+                                jump .input_loop
 
-                        "Yes.":
-                            pass
+                            "No.":
+                                m 1eka "Oh, okay."
 
-                        "No.":
-                            m 1eka "Oh, okay."
-                            $ ready = True
+                    $ del menu_list
 
-                $ del[menu_list]
-    python:
-        del[response_quips]
-        del[response_quip]
-        del[ready]
-        del[raw_search_request]
-        del[lower_search_request]
-
+    $ del response_quips, response_quip, raw_search_request, lower_search_request
     return
 
 label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=True):
@@ -205,43 +202,45 @@ label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=T
     $ ytm_threading.updateThreadArgs(ytm_threading.get_audio_info, [url])
     call ytm_get_audio_info_loop
     $ audio_info = _return
+    $ has_failed = False
 
     if audio_info:
         if add_to_search_hist:
             $ ytm_utils.addSearchHistory(
                 (
-                    audio_info["TITLE"],
-                    ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["ID"]
+                    audio_info["title"],
+                    ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["id"]
                 )
             )
         if add_to_audio_hist:
             $ ytm_utils.addAudioHistory(
-                ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["ID"]
+                ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["id"]
             )
 
-        if ytm_utils.findCache(audio_info["ID"]):
+        if ytm_utils.findCache(audio_info["id"]):
             m 1dsa "Let me play that for us.{w=.5}.{w=.5}.{nw}"
 
-            if ytm_utils.playAudio(ytm_globals.SHORT_MUSIC_DIRECTORY + audio_info["ID"] + ytm_globals.EXTENSION, name=audio_info["TITLE"]):
+            if ytm_utils.playAudio(ytm_globals.SHORT_MUSIC_DIRECTORY + audio_info["id"] + ytm_globals.EXTENSION, name=audio_info["title"]):
                 m 1hua "There we go!"
 
             else:
+                $ has_failed = True
                 m 1ekd "Oh no...{w=0.5}something went wrong, [mas_get_player_nickname(regex_replace_with_nullstr='my ')]..."
                 m 1euc "I'm sure we listened to this song before, but I can't seem to find it anymore..."
-                m 1eka "Let's try again later, alright?"
+                # m 1eka "Let's try again later, alright?"
 
         else:
-            if ytm_utils.shouldCacheFirst(audio_info["SIZE"]):
+            if ytm_utils.shouldCacheFirst(audio_info["size"]):
                 m 3eub "We'll need to wait for a bit."
                 m 1hua "I hope you don't mind, [mas_get_player_nickname()]~"
                 $ ytm_threading.resetThread(ytm_threading.cache_audio_from_url)
                 $ ytm_threading.updateThreadArgs(
                     ytm_threading.cache_audio_from_url,
                     [
-                        audio_info["URL"],
-                        audio_info["TITLE"],
-                        audio_info["SIZE"],
-                        ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["ID"] + ytm_globals.EXTENSION
+                        audio_info["url"],
+                        audio_info["title"],
+                        audio_info["size"],
+                        ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["id"] + ytm_globals.EXTENSION
                     ]
                 )
                 $ ytm_threading.cache_audio_from_url.start()
@@ -250,7 +249,7 @@ label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=T
                 m 1dsa "Let me just play that for us.{w=0.5}{nw}"
                 $ ytm_threading.updateThreadArgs(
                     ytm_threading.play_audio,
-                    [audio_info["URL"], audio_info["ID"], audio_info["TITLE"], audio_info["SIZE"], True]
+                    [audio_info["url"], audio_info["id"], audio_info["title"], audio_info["size"], True]
                 )
                 call ytm_play_audio_loop
 
@@ -259,23 +258,40 @@ label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=T
                     $ ytm_threading.resetThread(ytm_threading.cache_audio_from_ram)
                     $ ytm_threading.updateThreadArgs(
                         ytm_threading.cache_audio_from_ram,
-                        [_return, ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["ID"] + ytm_globals.EXTENSION]
+                        [_return, ytm_globals.FULL_MUSIC_DIRECTORY + audio_info["id"] + ytm_globals.EXTENSION]
                     )
                     $ ytm_threading.cache_audio_from_ram.start()
 
                 else:
+                    $ has_failed = True
                     m 1eud "Something went wrong, [player]..."
-                    m 1eua "Let's try again later, alright?"
+                    # m 1eua "Let's try again later, alright?"
 
     else:
+        $ has_failed = True
         m 1ekd "I'm sorry, [player]...{w=0.2}maybe I did something wrong..."# But she knows it's either your or youtube's fail
         m 1ekc "I can't play this song right now."
-        m 1eka "Let's try again later, okay?"
+        # m 1eka "Let's try again later, okay?"
 
+    if has_failed:
+        m 3eka "Do you want to try again?{nw}"
+        $ _history_list.pop()
+        menu:
+            m "Do you want to try again?{fast}"
+
+            "Yes.":
+                # Try again
+                window auto
+                $ del audio_info, has_failed
+                return False
+
+            "No.":
+                m 1eka "Oh, okay."
+
+    # Successfully downloaded OR failed and don't want to try again
     window auto
-    $ ready = True
-    $ del[audio_info]
-    return
+    $ del audio_info, has_failed
+    return True
 
 init 5 python:
     addEvent(
@@ -291,12 +307,12 @@ label ytm_monika_finished_caching_audio:
     if store.mas_globals.in_idle_mode or (mas_canCheckActiveWindow() and not mas_isFocused()):
         m 1eud "Oh, looks like your song finished downloading.{w=1}{nw}"
         m 3eua "I'll just play that for us.{w=0.5}.{w=0.5}.{nw}"
-        $ ytm_utils.playAudio(ytm_globals.audio_to_queue["PATH"], name=ytm_globals.audio_to_queue["TITLE"])
+        $ ytm_utils.playAudio(ytm_globals.audio_to_queue["path"], name=ytm_globals.audio_to_queue["title"])
 
     else:
         m 3eua "Oh, looks like your song finished downloading."
         m 1dsa "Let me just play it for us.{w=0.5}.{w=0.5}.{nw}"
-        $ ytm_utils.playAudio(ytm_globals.audio_to_queue["PATH"], name=ytm_globals.audio_to_queue["TITLE"])
+        $ ytm_utils.playAudio(ytm_globals.audio_to_queue["path"], name=ytm_globals.audio_to_queue["title"])
 
         if renpy.random.randint(1, 20) == 1:
             $ current_time = datetime.datetime.now().time()

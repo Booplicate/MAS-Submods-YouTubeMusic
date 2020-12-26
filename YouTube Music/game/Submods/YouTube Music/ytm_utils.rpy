@@ -26,10 +26,10 @@ init -5 python in ytm_globals:
     has_connection = None
 
     # Maximum search results
-    SEARCH_LIMIT = 99
+    SEARCH_LIMIT = 50
 
     # The number of attempts to request audio streams before giving up
-    STREAM_REQUEST_ATTEMPTS = 5
+    STREAM_REQUEST_ATTEMPTS = 3
 
     # mas_gen_scrollable_menu() constants
     # (X, Y, W, H)
@@ -67,9 +67,9 @@ init -5 python in ytm_globals:
     #     r"(?:var\s+ytInitialData\s*=\s*|window\[\"ytInitialData\"\]|scraper_data_begin)(.+?)(?:ytInitialPlayerResponse|window\[\"ytInitialPlayerResponse\"\]|scraper_data_end)",
     #     re.DOTALL
     # )
-    PARSE_PATTERN_VIDEO = re.compile(
-        r"(?:},\"title\":{\"runs\":\[{\"text\":\")(.+?)(?:\"}\],\"accessibility\":)(?:.+?)(?:\"webCommandMetadata\":{\"url\":\"/)(watch\?v=[-_0-9a-zA-Z]{11})(?:\",\"webPageType\":\"WEB_PAGE_TYPE_WATCH\")"
-    )
+    # PARSE_PATTERN_VIDEO = re.compile(
+    #     r"(?:},\"title\":{\"runs\":\[{\"text\":\")(.+?)(?:\"}\],\"accessibility\":)(?:.+?)(?:\"webCommandMetadata\":{\"url\":\"/)(watch\?v=[-_0-9a-zA-Z]{11})(?:\",\"webPageType\":\"WEB_PAGE_TYPE_WATCH\")"
+    # )
     # PARSE_PATTERN_PLAYLIST = re.compile(r'"playlistVideoRenderer":\{"videoId":"([-_0-9a-zA-Z]{11})","thumbnail"')
 
     # We keep cache here
@@ -80,21 +80,24 @@ init -5 python in ytm_globals:
     # Cache extension
     EXTENSION = ".cache"
 
-    # Params for yt-dl (pass in in pafy obj as ydl_opts)
+    # Params for yt-dl
     # NOTE: these might be interesting:
     #   nocheckcertificate
     #   prefer_insecure
     YDL_OPTS = {
-        "cachedir": FULL_MUSIC_DIRECTORY,# Redirect the cache to our folder
-        # "verbose": True,# We want to get full tracebacks
-        "quiet": True,# RenPy has broken stdio
-        "user-agent": "Just Monika! (Monika After Story v{0})".format(renpy.config.version),
+        # Redirect the cache to our folder (youtube-sigfuncs will be created automatically)
+        "cachedir": FULL_MUSIC_DIRECTORY,
+        # "verbose": True,
+        # RenPy has broken stdio, we better not to use it
+        "quiet": True,
+        # NOTE: this probably doesn't work
+        "user_agent": HEADERS["User-Agent"],
     }
 
     # Did we just start a loop or we're continuing looping?
     first_pass = True
     # a dict with the title and path to the audio we need to queue
-    audio_to_queue = {"TITLE": "", "PATH": ""}
+    audio_to_queue = {"title": "", "path": ""}
     # Do we play an audio or no
     is_playing = False
     # all videos URLs from the playlist we're currently listening to
@@ -162,13 +165,16 @@ init python in ytm_utils:
     import os
     import urllib2
     import re
-    import pafy
+    # import pafy
+    import youtube_dl
     # from bs4 import BeautifulSoup
     from bs4 import UnicodeDammit
     from HTMLParser import HTMLParser
     # from json import load as to_json
     from time import time
     from threading import Thread
+
+    youtube_dl.std_headers["User-Agent"] = ytm_globals.YDL_OPTS["user_agent"]
 
 # # # UTIL STUFF
 
@@ -290,8 +296,6 @@ init python in ytm_utils:
             ytm_globals.audio_history.remove(entry)
         ytm_globals.audio_history.append(entry)
 
-# # # URL STUFF
-
     def isOnline(force_update=False):
         """
         Checks if we have an internet connection
@@ -315,19 +319,36 @@ init python in ytm_utils:
                 )
                 ytm_globals.has_connection = True
 
-            # extra handling for the Too Many Requests response
-            except urllib2.HTTPError as e:
-                if e.code == 429:
+            except Exception as e:
+                # Extra handling for the Too Many Requests response
+                if isinstance(e, urllib2.HTTPError) and e.code == 429:
                     ytm_globals.has_connection = True
+
                 else:
                     writeLog("No connection.", e)
                     ytm_globals.has_connection = False
 
-            except Exception as e:
-                writeLog("No connection.", e)
-                ytm_globals.has_connection = False
-
         return ytm_globals.has_connection
+
+    def clean_string(string):
+        """
+        Cleans a video title
+
+        IN:
+            string - string to handle
+
+        OUT:
+            clean string
+        """
+        # Clean the string
+        string = string.replace("[", "[[").replace("{", "{{").replace("\\\"", "\"").encode(errors="replace")
+        # Workaround if we get a title longer than 100 chars (somehow?)
+        if len(string) > 100:
+            string = string[:95] + "(...)"
+
+        return string
+
+# # # URL STUFF
 
     def isYouTubeURL(string):
         """
@@ -413,9 +434,13 @@ init python in ytm_utils:
             string - the user's search request
 
         RETURNS:
-            ready to use YouTube URL with the search request
+            youTube URL with the search query
+            or empty string if the request was empty
         """
-        return ytm_globals.YOUTUBE + ytm_globals.SEARCH + toSearchString(string)
+        string = toSearchString(string)
+        if string:
+            return ytm_globals.YOUTUBE + ytm_globals.SEARCH + string
+        return ""
 
     def requestHTML(url):
         """
@@ -454,75 +479,60 @@ init python in ytm_utils:
 
 # # # VIDEO STUFF
 
-    def getSearchResults(html):
+    def getSearchResults(search_request):
         """
-        Gets a list of search results from the html
+        Gets a list of search results
 
         IN:
-            html - the html we get videos from
+            search_request - search request
 
         RETURNS:
             list with tuples (video's title, video's URL)
         """
         videos_info = list()
 
-        if not html:
+        if not search_request:
             return videos_info
 
-        try:
-            # bs = BeautifulSoup(clearHTML(html), "html.parser")
-            html = clearHTML(html)
-        except Exception as e:
-            writeLog("Failed to parse html data. Bad encoding?", e)
-            return videos_info
+        with youtube_dl.YoutubeDL(dict(ytm_globals.YDL_OPTS)) as yt_dl:
+            try:
+                # Try to get basic info for the first 99 videos
+                yt_dl_info = yt_dl.extract_info(
+                    "ytsearch{0}:{1}".format(ytm_globals.SEARCH_LIMIT, search_request),
+                    download=False,
+                    process=False
+                )
 
-        # for data in bs.find_all("a", {"class":"yt-uix-tile-link yt-ui-ellipsis yt-ui-ellipsis-2 yt-uix-sessionlink"}):
-        #     # damn youtube's mixes
-        #     if (
-        #         not "&list=" in data["href"]
-        #         and not "/user" in data["href"]
-        #         and not "/channel" in data["href"]
-        #         # "/watch?v=" in data["href"]
-        #     ):
-        #         videos_info.append(
-        #             (
-        #                 re.sub("[\[\]\~\{\}\"\']", "", data["title"]),
-        #                 store.ytm_globals.YOUTUBE + data["href"]
-        #             )
-        #         )
+            except Exception as e:
+                writeLog("Failed to retrieve search results.", e)
+                return videos_info
 
-        #         total += 1
-        #         if total >= limit:
-        #             break
+            # This probably cannot be None nor even empty, but just in case
+            if not yt_dl_info:
+                writeLog("Got invalid data from yt-dl: {0}".format(yt_dl_info))
+                return videos_info
 
-        # get the block of html we need
-        total_songs = 0
-        # get pairs of title + url
-        data = re.findall(ytm_globals.PARSE_PATTERN_VIDEO, html)
-        if data is not None:
-            for title, url in data:
-                if (
-                    title is not None
-                    and url is not None
-                ):
-                    videos_info.append(
-                        (
-                            title.replace("[", "[[").replace("{", "{{").replace("\\\"", "\"").encode(errors="replace"),
-                            ytm_globals.YOUTUBE + url
-                        )
-                    )
-                    total_songs += 1
+            # NOTE: This may contain a generator
+            entries = yt_dl_info.get("entries", [])
+            total_songs = 0
+            for entry in entries:
+                title = entry.get("title", "[An untitled video]")
+                id = entry.get("id", entry.get("url", None))
 
-                    if total_songs >= ytm_globals.SEARCH_LIMIT:
-                        return videos_info
+                # If we couldn't get the id, we should skip this video
+                if id is None or len(id) != 11:
+                    writeLog("Got invalid video id: {0}".format(id))
+                    continue
 
-        # else:
-        #     timestamp = str(int(time()))
-        #     path = renpy.config.basedir.replace("\\", "/") + "/log/"
-        #     name = "ytm_html_log_" + timestamp + ".log"
-        #     with open(path + name, "w") as html_file:
-        #         html_file.write(html)
-        #     writeLog("Failed to scrape an HTML, the HTML was saved as '{0}' in '{1}'. Please, send it to the developer of this submod.".format(name, path))
+                # Sanitize the title so we can display it
+                if title:
+                    title = clean_string(title)
+                url = ytm_globals.YOUTUBE + ytm_globals.WATCH + id
+
+                videos_info.append((title, url))
+                total_songs += 1
+                if total_songs >= ytm_globals.SEARCH_LIMIT:
+                    return videos_info
 
         return videos_info
 
@@ -594,7 +604,7 @@ init python in ytm_utils:
         """
         return "manifest" in stream.url
 
-    def fixStreamURL(stream):
+    def fixStreamURL(stream_url):
         """
         Parses XML manifest to find an appropriate URL to the stream
 
@@ -605,16 +615,21 @@ init python in ytm_utils:
             pure URL or None if got an exception
         """
         request = urllib2.Request(
-            url=stream.url,
+            url=stream_url,
             headers=ytm_globals.HEADERS
         )
         try:
             xml = urllib2.urlopen(request, timeout=15).read()
+            proper_url = xml.split('codecs="opus"', 1)[1].split("<BaseURL>", 1)[1].split("</BaseURL>")[0]
+            if "ratebypass" not in proper_url:
+                proper_url += "&ratebypass=yes"
+
+            return proper_url
+
         except Exception as e:
             writeLog("Failed to request XML data.", e)
-            return None
 
-        return xml.split('codecs="opus"', 1)[1].split("<BaseURL>", 1)[1].split("</BaseURL>")[0]
+        return None
 
     def getAudioInfo(url):
         """
@@ -633,16 +648,69 @@ init python in ytm_utils:
         while tries > 0:
             tries -= 1
             try:
-                video = pafy.new(
-                    url=url,
-                    ydl_opts=ytm_globals.YDL_OPTS
-                )
-                stream = video.getbestaudio(preftype="webm")
+                with youtube_dl.YoutubeDL(dict(ytm_globals.YDL_OPTS)) as yt_dl:
+                    yt_dl_info = yt_dl.extract_info(url, download=False)
+
+                    # Get list of dicts
+                    formats = yt_dl_info.get("formats", [])
+                    if not formats:
+                        writeLog("Got empty audio data from yt-dl.")
+                        return None
+
+                    # Now filter so we get the best format that works in renpy
+                    best_format = max(formats, key=lambda frm: (frm.get("acodec") == "opus", frm.get("abr"), frm.get("asr")))
+                    if best_format.get("acodec") != "opus":
+                        writeLog("No audio streams with opus codec found.")
+                        return None
+
+                    title = clean_string(yt_dl_info.get("title", "[An untitled video]"))
+
+                    id = yt_dl_info.get("id", yt_dl_info.get("url", None))
+                    if id is None or len(id) != 11:
+                        writeLog("Got invalid video id from yt-dl: {0}".format(id))
+                        return None
+
+                    content_size = None
+                    stream_url = best_format.get("url")
+                    if not stream_url:
+                        if stream_url is None:
+                            writeLog("Audio stream is NoneType. Live streams are not supported yet.")
+
+                        else:
+                            writeLog("Got invalid stream url from yt-dl: {0}.".format(stream_url))
+                        return None
+
+                    elif "manifest" in stream_url:
+                        stream_url = fixStreamURL(stream_url)
+                        if not stream_url:
+                            writeLog("Failed to get stream url from manifest.")
+                            return None
+
+                    # If we got a propen stream url, then we assume a proper content size
+                    else:
+                        content_size = best_format.get("filesize")
+
+                    # Fallback if we got the wrong stream, or yt-dl couldn't return the CS
+                    if not content_size:
+                        try:
+                            content_size = int(
+                                urllib2.urlopen(
+                                    urllib2.Request(
+                                        url=stream_url,
+                                        headers=ytm_globals.HEADERS
+                                    ),
+                                    timeout=15
+                                ).info().getheaders("Content-Length")[0]
+                            )
+
+                        except Exception as e:
+                            writeLog("Failed to request content size.", e)
+                            return None
 
             except Exception as e:
-                _type = type(e)
-                if _type not in err_types:
-                    err_types.add(_type)
+                e_type = type(e)
+                if e_type not in err_types:
+                    err_types.add(e_type)
                     writeLog("Failed to request audio stream.", e)
 
                 if tries <= 0:
@@ -652,42 +720,7 @@ init python in ytm_utils:
                 # If we got the stream w/o exceptions, break the loop
                 tries = 0
 
-        # sanity check
-        # when trying to get the stream for a live stream, pafy will return None
-        if stream is None:
-            writeLog("Audio stream is NoneType. Live streams are not supported.")
-            return None
-
-        # fix stream if youtube fooked up
-        if isBadStream(stream):
-            # NOTE: Technically we can get None instead of the URL
-            url_to_audio = fixStreamURL(stream)
-
-        else:
-            url_to_audio = stream.url
-
-        if url_to_audio is None:
-            writeLog("Failed to get the URL to the audio stream.")
-            return None
-
-        # make a request
-        request = urllib2.Request(
-            url=url_to_audio,
-            headers=ytm_globals.HEADERS
-        )
-
-        # get size
-        try:
-            # NOTE: yt sends str, need to convert
-            content_size = int(
-                urllib2.urlopen(request, timeout=15).info().getheaders("Content-Length")[0]
-            )
-
-        except Exception as e:
-            writeLog("Failed to request content size.", e)
-            return None
-
-        return {"TITLE": video.title, "ID": video.videoid, "URL": url_to_audio, "SIZE": content_size}
+        return {"title": title, "id": id, "url": stream_url, "size": content_size}
 
     def shouldCacheFirst(audio_size):
         """
@@ -931,7 +964,7 @@ init python in ytm_utils:
         # Credits to T.L.B. Orchestration
         audio_info = getAudioInfo("https://youtu.be/J7XtCHxVUto")
         if audio_info:
-            cache = cacheDataToRAM(audio_info["URL"], audio_info["SIZE"])
+            cache = cacheDataToRAM(audio_info["url"], audio_info["size"])
             end_ts = time()
             d_t = end_ts - start_ts
             if cache and d_t < 15:
@@ -953,19 +986,17 @@ init 5 python in ytm_threading:
 
     def _search_th(raw_search_request):
         """
-        A func we use in threading to get search results
+        A func we use in threading to get search results and format them to display in the menu
 
         IN:
             raw_search_request - the user's search request
 
         RETURNS:
-            videos data
+            videos data formatted for the menu
         """
-        return ytm_utils.getSearchResults(
-            ytm_utils.requestHTML(
-                ytm_utils.toSearchURL(
-                    raw_search_request
-                )
+        return ytm_utils.buildMenuList(
+            ytm_utils.getSearchResults(
+                raw_search_request
             )
         )
 
@@ -1038,9 +1069,9 @@ init 5 python in ytm_threading:
         """
         cache = ytm_utils.cacheDataToDisk(url, content_size, directory)
         if cache:
-            ytm_globals.audio_to_queue["TITLE"] = title
+            ytm_globals.audio_to_queue["title"] = title
             # NOTE: The play function uses short paths so we need to cut a part of the path here
-            ytm_globals.audio_to_queue["PATH"] = directory.split(ytm_globals.GAME_DIR, 1)[1]
+            ytm_globals.audio_to_queue["path"] = directory.split(ytm_globals.GAME_DIR, 1)[1]
             store.pushEvent("ytm_monika_finished_caching_audio")
             return True
         # got an exception somewhere
