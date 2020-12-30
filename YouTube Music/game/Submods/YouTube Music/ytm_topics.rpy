@@ -116,16 +116,14 @@ label ytm_monika_find_music:
 
                 # else:
                 show monika 1dsa at t11
-                call .ytm_process_audio_info(raw_search_request, add_to_search_hist=True)
+                call .ytm_process_audio_info(raw_search_request, add_to_search_hist=True, add_to_audio_hist=True)
                 if not _return:
                     jump .input_loop
 
             else:
                 $ ytm_utils.addSearchHistory(
-                    (
-                        lower_search_request,
-                        lower_search_request
-                    )
+                    lower_search_request,
+                    lower_search_request
                 )
 
                 # Since I don't have plans to expand this, I'll leave it as is
@@ -157,7 +155,7 @@ label ytm_monika_find_music:
                         show monika at t11
 
                         if "https" in _return:
-                            call .ytm_process_audio_info(_return)
+                            call .ytm_process_audio_info(_return, add_to_search_hist=False, add_to_audio_hist=True)
                             if not _return:
                                 jump .menu_display
 
@@ -196,7 +194,7 @@ label ytm_monika_find_music:
     $ del response_quips, response_quip, raw_search_request, lower_search_request
     return
 
-label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=True):
+label .ytm_process_audio_info(url, add_to_search_hist, add_to_audio_hist):
     show monika 1dsa
     window hide
     $ ytm_threading.updateThreadArgs(ytm_threading.get_audio_info, [url])
@@ -204,19 +202,17 @@ label .ytm_process_audio_info(url, add_to_search_hist=False, add_to_audio_hist=T
     $ audio_info = _return
     $ has_failed = False
 
-    if audio_info:
-        if add_to_search_hist:
-            $ ytm_utils.addSearchHistory(
-                (
-                    audio_info["title"],
-                    ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["id"]
-                )
-            )
-        if add_to_audio_hist:
-            $ ytm_utils.addAudioHistory(
-                ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["id"]
-            )
+    if add_to_search_hist:
+        $ ytm_utils.addSearchHistory(
+            (audio_info["title"] if audio_info else "[[An untitled video]"),
+            ((ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["id"]) if audio_info else url)
+        )
+    if add_to_audio_hist:
+        $ ytm_utils.addAudioHistory(
+            ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["id"]
+        )
 
+    if audio_info:
         if ytm_utils.findCache(audio_info["id"]):
             m 1dsa "Let me play that for us.{w=.5}.{w=.5}.{nw}"
 

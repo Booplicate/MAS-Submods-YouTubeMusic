@@ -266,32 +266,36 @@ init python in ytm_utils:
                 store.persistent._seen_audio.pop(audio)
                 writeLog("Found bad data in persistent and removed it.")
 
-    def addSearchHistory(entry):
+    def addSearchHistory(search_request, value):
         """
         Adds the given entry to the search history list
         Will update the list if the entry is already in it
 
         IN:
-            entry - an entry to add
+            search_request - string with the search query
+            value - returned value for the query (either a video url, or the query itself)
         """
         # since we use this in buttons prompts, we need to "sanitize" it
-        entry = (
-            entry[0].replace("[", "[[").replace("{", "{{"),
-            entry[1]
-        )
+        # entry = (
+        #     entry[0].replace("[", "[[").replace("{", "{{"),
+        #     entry[1]
+        # )
+        entry = (search_request, value)
 
         if entry in ytm_globals.search_history:
             ytm_globals.search_history.remove(entry)
         ytm_globals.search_history.append(entry)
 
-    def addAudioHistory(entry):
+    def addAudioHistory(url):
         """
         Adds the given entry to the audio history list
         Will update the list if the entry is already in it
 
         IN:
-            entry - an entry to add
+            url - full url to the audio
         """
+        entry = url
+
         if entry in ytm_globals.audio_history:
             ytm_globals.audio_history.remove(entry)
         ytm_globals.audio_history.append(entry)
@@ -340,8 +344,11 @@ init python in ytm_utils:
         OUT:
             clean string
         """
+        if not string:
+            return ""
+
         # Clean the string
-        string = string.replace("[", "[[").replace("{", "{{").replace("\\\"", "\"").encode(errors="replace")
+        string = string.strip().replace("[", "[[").replace("{", "{{")
         # Workaround if we get a title longer than 100 chars (somehow?)
         if len(string) > 100:
             string = string[:95] + "(...)"
@@ -516,7 +523,8 @@ init python in ytm_utils:
             entries = yt_dl_info.get("entries", [])
             total_songs = 0
             for entry in entries:
-                title = entry.get("title", "[An untitled video]")
+                title = clean_string(entry.get("title", "[An untitled video]"))
+                uploader = clean_string(entry.get("uploader", "[Unknown author]"))
                 id = entry.get("id", entry.get("url", None))
 
                 # If we couldn't get the id, we should skip this video
@@ -524,12 +532,9 @@ init python in ytm_utils:
                     writeLog("Got invalid video id: {0}".format(id))
                     continue
 
-                # Sanitize the title so we can display it
-                if title:
-                    title = clean_string(title)
                 url = ytm_globals.YOUTUBE + ytm_globals.WATCH + id
 
-                videos_info.append((title, url))
+                videos_info.append((title + " - " + uploader, url))
                 total_songs += 1
                 if total_songs >= ytm_globals.SEARCH_LIMIT:
                     return videos_info
@@ -664,6 +669,7 @@ init python in ytm_utils:
                         return None
 
                     title = clean_string(yt_dl_info.get("title", "[An untitled video]"))
+                    uploader = clean_string(yt_dl_info.get("uploader", "[Unknown author]"))
 
                     id = yt_dl_info.get("id", yt_dl_info.get("url", None))
                     if id is None or len(id) != 11:
@@ -720,7 +726,7 @@ init python in ytm_utils:
                 # If we got the stream w/o exceptions, break the loop
                 tries = 0
 
-        return {"title": title, "id": id, "url": stream_url, "size": content_size}
+        return {"title": title + " - " + uploader, "id": id, "url": stream_url, "size": content_size}
 
     def shouldCacheFirst(audio_size):
         """
