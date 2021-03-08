@@ -207,7 +207,7 @@ label .ytm_process_audio_info(url, add_to_search_hist, add_to_audio_hist):
             (audio_info["title"] if audio_info else "[[An untitled video]"),
             ((ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["id"]) if audio_info else url)
         )
-    if add_to_audio_hist:
+    if add_to_audio_hist and audio_info:
         $ ytm_utils.addAudioHistory(
             ytm_globals.YOUTUBE + ytm_globals.WATCH + audio_info["id"]
         )
