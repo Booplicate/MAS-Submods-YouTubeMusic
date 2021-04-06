@@ -159,7 +159,7 @@ label ytm_monika_find_music:
                             if not _return:
                                 jump .menu_display
 
-                        elif _return == "_changed_mind":
+                        elif _return == ytm_globals.SCR_MENU_CHANGED_MIND:
                             if not ytm_globals.is_playing:
                                 m 1eka "Oh...{w=0.2}{nw}"
                                 extend 3ekb "I really love to listen to music with you!"
@@ -167,7 +167,7 @@ label ytm_monika_find_music:
                             else:
                                 m 1eka "Oh, okay."
 
-                        elif _return == "_another_song":
+                        elif _return == ytm_globals.SCR_MENU_ANOTHER_SING:
                             m 1eub "Alright!"
                             jump .input_loop
 
@@ -310,7 +310,7 @@ label ytm_monika_finished_caching_audio:
         m 1dsa "Let me just play it for us.{w=0.5}.{w=0.5}.{nw}"
         $ ytm_utils.playAudio(ytm_globals.audio_to_queue["path"], name=ytm_globals.audio_to_queue["title"])
 
-        if renpy.random.randint(1, 20) == 1:
+        if renpy.random.randint(1, 10) == 1:
             $ current_time = datetime.datetime.now().time()
 
             show monika 5eubla at t11 zorder MAS_MONIKA_Z with dissolve_monika

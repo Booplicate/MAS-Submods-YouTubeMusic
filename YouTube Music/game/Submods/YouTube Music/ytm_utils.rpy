@@ -35,10 +35,12 @@ init -5 python in ytm_globals:
     # (X, Y, W, H)
     SCR_MENU_AREA = (835, 40, 440, 528)
     SCR_MENU_XALIGN = -0.05
+    SCR_MENU_ANOTHER_SING = "_another_song"
+    SCR_MENU_CHANGED_MIND = "_changed_mind"
     # (prompt, return, italics, bold, offset)
     SCR_MENU_LAST_ITEMS = (
-        ("I want to find another song.", "_another_song", False, False, 20),
-        ("I changed my mind.", "_changed_mind", False, False, 0),
+        ("I want to find another song.", SCR_MENU_ANOTHER_SING, False, False, 20),
+        ("I changed my mind.", SCR_MENU_CHANGED_MIND, False, False, 0),
     )
 
     # Maximum audio size to play from RAM (bytes)
@@ -347,11 +349,11 @@ init python in ytm_utils:
         if not string:
             return ""
 
-        # Clean the string
-        string = string.strip().replace("[", "[[").replace("{", "{{")
         # Workaround if we get a title longer than 100 chars (somehow?)
         if len(string) > 100:
             string = string[:95] + "(...)"
+        # Clean the string
+        string = string.strip().replace("[", "[[").replace("{", "{{")
 
         return string
 
