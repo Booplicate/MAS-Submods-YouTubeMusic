@@ -323,7 +323,7 @@ label ytm_monika_finished_caching_audio:
             else:
                 $ renpy.pause(4.0, hard=True)
 
-            $ del[current_time]
+            $ del current_time
 
         else:
             m 1hua "There we go!"
