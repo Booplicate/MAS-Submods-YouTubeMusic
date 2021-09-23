@@ -12,7 +12,7 @@ A submod which allows you to listen to music from youtube in the game. Compatibl
 
     - **Only for Mac**: Open `DDLC.app/Contents/Resources/autorun/lib/darwin-x86_64/lib/python2.7` and copy 2 files from there: `ssl.pyo` and `_ssl.so`. Then open `DDLC.app/Contents/MacOS/lib/darwin-x86_64/Lib` and paste the files there.
 
-4. Optionally install [Paste](https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste) (allows pasting links in the game) and/or [Submod Updater Plugin](https://github.com/Booplicate/MAS-Submods-SubmodUpdaterPlugin) (allows updating submods via in-game updater).
+4. Optionally install [Paste](https://github.com/Legendkiller21/MAS-Submods-Paste) (allows pasting links in the game) and/or [Submod Updater Plugin](https://github.com/Booplicate/MAS-Submods-SubmodUpdaterPlugin) (allows updating submods via in-game updater).
 
 If you installed everything correctly, your folders will look like this (on win/linux):
 ```
