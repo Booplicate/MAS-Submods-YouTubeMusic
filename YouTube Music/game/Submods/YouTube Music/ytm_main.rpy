@@ -9,7 +9,7 @@ init -990 python:
             "Monika searches songs by names, but you can also give her direct youtube links.\n"
             "Fully compatible with {a=https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music}{i}{u}Nightmusic{/u}{/i}{/a}."
         ),
-        version="2.11",
+        version="3.0",
         settings_pane="ytm_settings_pane",
         version_updates={}
     )
