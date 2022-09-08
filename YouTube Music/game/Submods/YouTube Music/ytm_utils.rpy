@@ -212,7 +212,7 @@ init -15 python in ytm_utils:
     def report_error(msg: str, err: Exception|None = None, print_stack: bool = False):
         submod_log.error(_format_log(msg, err), exc_info=print_stack)
 
-    def report_ingo(msg: str, print_stack: bool = False):
+    def report_info(msg: str, print_stack: bool = False):
         submod_log.info(_format_log(msg, None), exc_info=print_stack)
 
     def delete_files(path, extension, e_str=None):
