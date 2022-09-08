@@ -7,7 +7,6 @@ init -990 python:
         description=(
             "A submod which allows you to listen to music from YouTube in the game. "
             "Monika searches songs by names, but you can also give her direct youtube links.\n"
-            "Recommended to use {a=https://github.com/Legendkiller21/MAS-Submods/tree/master/Paste}{i}{u}Paste{/u}{/i}{/a} for copying/pasting links.\n"
             "Fully compatible with {a=https://github.com/multimokia/MAS-Submods/tree/NightMusic/Night%20Music}{i}{u}Nightmusic{/u}{/i}{/a}."
         ),
         version="2.11",
@@ -59,7 +58,7 @@ screen ytm_settings_pane():
 
         # wrapper
         def test_connection():
-            store.ytm_utils.isOnline(True)
+            store.ytm_utils.is_online(True)
 
     vbox:
         ypos 0
@@ -102,7 +101,7 @@ screen ytm_history_submenu(animate=True):
             mousewheel True
 
             vbox:
-                for button_prompt, input_value in reversed(store.ytm_globals.search_history):
+                for button_prompt, input_value in reversed(store.ytm_globals.search_history.items()):
                     textbutton button_prompt:
                         xpos 20
                         xsize 420
@@ -154,6 +153,7 @@ screen ytm_input_screen(prompt):
             input:
                 id "input"
                 value ytm_input
+                copypaste True
 
 transform ytm_menu_slide:
     crop_relative True

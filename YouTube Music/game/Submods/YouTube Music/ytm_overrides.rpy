@@ -3,7 +3,7 @@
 init 100:
     # General overrides
     python:
-        store.mas_submod_utils.registerFunction("quit", ytm_utils.cleanUp)
+        store.mas_submod_utils.registerFunction("quit", ytm_utils.cleanup)
         store.mas_submod_utils.registerFunction("mas_o31_autoload_check", ytm_utils.check_o31_spook)
         store.songs.PAUSE = "Pause"
         store.songs.UNPAUSE = "Play"
@@ -80,7 +80,7 @@ init 100:
                         mas_MUMUDropShield()
                     elif store.mas_globals.in_idle_mode:
                         # to idle
-                        mas_mumuToIdleShield() 
+                        mas_mumuToIdleShield()
                     else:
                         # otherwise we can enable interactions normally
                         mas_DropShield_mumu()
@@ -146,7 +146,7 @@ init 100:
                             style "music_menu_return_button"
                             action Return(page_num + 1)
 
-                textbutton _(songs.NO_SONG): 
+                textbutton _(songs.NO_SONG):
                     style "music_menu_return_button"
                     action Return(songs.NO_SONG)
 
@@ -386,199 +386,15 @@ init 100:
 
             label "Music Menu"
 
-init -999 python:
-    import os
-    os.environ["SSL_CERT_FILE"] = renpy.config.gamedir + "/python-packages/certifi/cacert.pem"
 
 # AudioData support for RenPy 6.99.12
 python early:
-    import io
     import os
-
-    class AudioData(unicode):
-        """
-        :doc: audio
-
-        This class wraps a bytes object containing audio data, so it can be
-        passed to the audio playback system. The audio data should be contained
-        in some format Ren'Py supports. (For examples RIFF WAV format headers,
-        not unadorned samples.)
-
-        `data`
-            A bytes object containing the audio file data.
-
-        `filename`
-            A synthetic filename associated with this data. It can be used to
-            suggest the format `data` is in, and is reported as part of
-            error messages.
-
-        Once created, this can be used wherever an audio filename is allowed. For
-        example::
-
-            define audio.easteregg = AudioData(b'...', 'sample.wav')
-            play sound easteregg
-        """
-
-        def __new__(cls, data, filename):
-            rv = unicode.__new__(cls, filename)
-            rv.data = data
-            return rv
-
-        def __init__(self, data, filename):
-            self.filename = filename
-
-        def __reduce__(self):
-            # Pickle as a str is safer
-            return (str, (self.filename, ))
-
-    def ytm_periodic_override(self):
-        """
-        This is the periodic call that causes this channel to load new stuff
-        into its queues, if necessary.
-        """
-
-        # Update the channel volume.
-        vol = self.chan_volume * renpy.game.preferences.volumes[self.mixer]
-
-        if vol != self.actual_volume:
-            renpy.audio.renpysound.set_volume(self.number, vol)
-            self.actual_volume = vol
-
-        # This should be set from something that checks to see if our
-        # mixer is muted.
-        force_stop = self.context.force_stop or (renpy.game.preferences.mute[self.mixer] and self.stop_on_mute)
-
-        if self.playing and force_stop:
-            renpy.audio.renpysound.stop(self.number)
-            self.playing = False
-            self.wait_stop = False
-
-        if force_stop:
-            if self.loop:
-                self.queue = self.queue[-len(self.loop):]
-            else:
-                self.queue = [ ]
-            return
-
-        # Should we do the callback?
-        do_callback = False
-
-        topq = None
-
-        # This has been modified so we only queue a single sound file
-        # per call, to prevent memory leaks with really short sound
-        # files. So this loop will only execute once, in practice.
-        while True:
-
-            depth = renpy.audio.renpysound.queue_depth(self.number)
-
-            if depth == 0:
-                self.wait_stop = False
-                self.playing = False
-
-            # Need to check this, so we don't do pointless work.
-            if not self.queue:
-                break
-
-            # If the pcm_queue is full, then we can't queue
-            # anything, regardless of if it is midi or pcm.
-            if depth >= 2:
-                break
-
-            # If we can't buffer things, and we're playing something
-            # give up here.
-            if not self.buffer_queue and depth >= 1:
-                break
-
-            # We can't queue anything if the depth is > 0 and we're
-            # waiting for a synchro_start.
-            if self.synchro_start and depth:
-                break
-
-            # If the queue is full, return.
-            if renpy.audio.renpysound.queue_depth(self.number) >= 2:
-                break
-
-            # Otherwise, we might be able to enqueue something.
-            topq = self.queue.pop(0)
-
-            # Blacklist of old file formats we used to support, but we now
-            # ignore.
-            lfn = topq.filename.lower() + self.file_suffix.lower()
-            for i in (".mod", ".xm", ".mid", ".midi"):
-                if lfn.endswith(i):
-                    topq = None
-
-            if not topq:
-                continue
-
-            try:
-                filename, start, end = self.split_filename(topq.filename, topq.loop)
-
-                if (end >= 0) and ((end - start) <= 0) and self.queue:
-                    continue
-
-                if isinstance(topq.filename, AudioData):
-                    topf = io.BytesIO(topq.filename.data)
-                else:
-                    topf = renpy.audio.audio.load(self.file_prefix + filename + self.file_suffix)
-
-                renpy.audio.renpysound.set_video(self.number, self.movie)
-
-                if depth == 0:
-                    renpy.audio.renpysound.play(self.number, topf, topq.filename, paused=self.synchro_start, fadein=topq.fadein, tight=topq.tight, start=start, end=end)
-                else:
-                    renpy.audio.renpysound.queue(self.number, topf, topq.filename, fadein=topq.fadein, tight=topq.tight, start=start, end=end)
-
-                self.playing = True
-
-            except:
-
-                # If playing failed, remove topq.filename from self.loop
-                # so we don't keep trying.
-                while topq.filename in self.loop:
-                    self.loop.remove(topq.filename)
-
-                if renpy.config.debug_sound and not renpy.game.after_rollback:
-                    raise
-                else:
-                    return
-
-            break
-
-        if self.loop and not self.queue:
-            for i in self.loop:
-                if topq is not None:
-                    newq = renpy.audio.audio.QueueEntry(i, 0, topq.tight, True)
-                else:
-                    newq = renpy.audio.audio.QueueEntry(i, 0, False, True)
-
-                self.queue.append(newq)
-        else:
-            do_callback = True
-
-        # Queue empty callback.
-        if do_callback and self.callback:
-            self.callback()  # E1102
-
-        # global global_pause
-        want_pause = self.context.pause or renpy.audio.audio.global_pause
-
-        if self.paused != want_pause:
-
-            if want_pause:
-                self.pause()
-            else:
-                self.unpause()
-
-            self.paused = want_pause
-
-    renpy.audio.audio.Channel.periodic = ytm_periodic_override
 
     @property
     def ytm_stdio_redirector_encoding(self):
         """
-        Implements the encoding property because one lazy bastard decided not to smh
+        Implements the encoding property
         """
         if hasattr(self.real_file, "encoding"):
             return self.real_file.encoding
@@ -586,7 +402,7 @@ python early:
 
     def ytm_stdio_redirector_isatty(self):
         """
-        Implements the isatty method because one lazy bastard decided not to smh
+        Implements the isatty method
         """
         if hasattr(self.real_file, "isatty"):
             return self.real_file.isatty()
@@ -594,7 +410,7 @@ python early:
 
     def ytm_stdio_redirector_fileno(self):
         """
-        Implements the fileno method because one lazy bastard decided not to smh
+        Implements the fileno method
         """
         if hasattr(self.real_file, "fileno"):
             return self.real_file.fileno()
