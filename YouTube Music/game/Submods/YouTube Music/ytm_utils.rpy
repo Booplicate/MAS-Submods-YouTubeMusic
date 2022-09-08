@@ -710,11 +710,16 @@ init -10 python in ytm_threading:
         RETURNS:
             videos data formatted for the menu
         """
-        return ytm_utils.build_menu_data(
-            ytm_utils.get_search_results(
-                raw_search_request
+        try:
+            return ytm_utils.build_menu_data(
+                ytm_utils.get_search_results(
+                    raw_search_request
+                )
             )
-        )
+
+        except Exception as e:
+            ytm_utils.report_error("_search_music_th failed", e)
+            return None
 
     def _download_and_play_th(url, video_id, video_title, audio_size, clear_queue) -> bool:
         """
@@ -730,9 +735,13 @@ init -10 python in ytm_threading:
         OUT:
             boolean
         """
-        if ytm_utils.download_audio(url):
-            audio = f"{ytm_globals.SHORT_MUSIC_DIRECTORY}{video_id}{ytm_globals.EXTENSION}"
-            return ytm_utils.play_audio(audio, name=video_title, clear_queue=clear_queue)
+        try:
+            if ytm_utils.download_audio(url):
+                audio = f"{ytm_globals.SHORT_MUSIC_DIRECTORY}{video_id}{ytm_globals.EXTENSION}"
+                return ytm_utils.play_audio(audio, name=video_title, clear_queue=clear_queue)
+
+        except Exception as e:
+            ytm_utils.report_error("_download_and_play_th failed", e)
 
         return False
 
@@ -746,7 +755,12 @@ init -10 python in ytm_threading:
         RETURNS:
             dict with various data (check get_audio_info() for more info)
         """
-        return ytm_utils.get_audio_info(url)
+        try:
+            return ytm_utils.get_audio_info(url)
+
+        except Exception as e:
+            ytm_utils.report_error("_get_audio_info_th failed", e)
+            return None
 
     def _download_and_notify_th(url, title, content_size, directory) -> bool:
         """
@@ -762,12 +776,16 @@ init -10 python in ytm_threading:
         OUT:
             boolean
         """
-        if ytm_utils.download_audio(url):
-            ytm_globals.audio_to_queue["title"] = title
-            # NOTE: The play function uses short paths so we need to cut a part of the path here
-            ytm_globals.audio_to_queue["path"] = directory.split(ytm_globals.GAME_DIR, 1)[1]
-            store.pushEvent("ytm_monika_finished_caching_audio")
-            return True
+        try:
+            if ytm_utils.download_audio(url):
+                ytm_globals.audio_to_queue["title"] = title
+                # NOTE: The play function uses short paths so we need to cut a part of the path here
+                ytm_globals.audio_to_queue["path"] = directory.split(ytm_globals.GAME_DIR, 1)[1]
+                store.pushEvent("ytm_monika_finished_caching_audio")
+                return True
+
+        except Exception as e:
+            ytm_utils.report_error("_download_and_notify_th failed", e)
 
         return False
 
