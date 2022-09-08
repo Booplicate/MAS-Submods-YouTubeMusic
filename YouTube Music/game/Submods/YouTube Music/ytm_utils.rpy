@@ -11,7 +11,7 @@ init 50 python:
         except Exception as e:
             # There's nothing that would create the folder now,
             # which means it has to be a perm issue
-            store.ytm_utils.writeLog("Failed to create cache directory.", e)
+            store.ytm_utils.report_error("Failed to create cache directory", e)
 
     if not os.path.isdir(ytm_globals.FULL_YT_NSIG_DIRECTORY):
         try:
@@ -20,7 +20,7 @@ init 50 python:
         except Exception as e:
             # There's nothing that would create the folder now,
             # which means it has to be a perm issue
-            store.ytm_utils.writeLog("Failed to create cache directory.", e)
+            store.ytm_utils.report_error("Failed to create cache directory", e)
 
     # Check connection on startup
     ytm_utils.is_online()
@@ -182,6 +182,7 @@ init -15 python in ytm_utils:
 
     import store
     from store import ytm_globals
+    from store.mas_submod_utils import submod_log
 
     youtube_dl.std_headers["User-Agent"] = ytm_globals.YDL_OPTS["user_agent"]
 
@@ -199,29 +200,20 @@ init -15 python in ytm_utils:
 
 # # # UTIL STUFF
 
-    def writeLog(msg, e=None):
-        """
-        Writes exceptions in logs
-
-        IN:
-            msg - additional info
-            e - exception
-                (Default: None)
-        """
+    def _format_log(msg: str, err: Exception|None) -> str:
         if e is not None:
-            e = " Exception: {0}".format(e)
-            if not e.endswith("."):
-                e += "."
+            e = f": {e}"
 
         else:
             e = ""
 
-        store.mas_submod_utils.writeLog(
-            "[YTM ERROR]: {0}{1}\n".format(
-                msg,
-                e
-            )
-        )
+        return f"[YTM]: {msg}{e}"
+
+    def report_error(msg: str, err: Exception|None = None, print_stack: bool = False):
+        submod_log.error(_format_log(msg, err), exc_info=print_stack)
+
+    def report_ingo(msg: str, print_stack: bool = False):
+        submod_log.info(_format_log(msg, None), exc_info=print_stack)
 
     def delete_files(path, extension, e_str=None):
         """
@@ -245,7 +237,7 @@ init -15 python in ytm_utils:
         except Exception as e:
             if not e_str:
                 e_str = ""
-            writeLog(e_str, e)
+            report_error(e_str, e)
 
     def delete_cache():
         """
@@ -332,7 +324,7 @@ init -15 python in ytm_utils:
                     ytm_globals.has_connection = True
 
                 else:
-                    writeLog("No connection.", e)
+                    report_error("No connection", e)
                     ytm_globals.has_connection = False
 
         return ytm_globals.has_connection
@@ -405,12 +397,12 @@ init -15 python in ytm_utils:
                 )
 
             except Exception as e:
-                writeLog("Failed to retrieve search results.", e)
+                report_error("Failed to retrieve search results", e, True)
                 return videos_info
 
             # This probably cannot be None nor even empty, but just in case
             if not yt_dl_info:
-                writeLog("Got invalid data from yt-dl: {0}".format(yt_dl_info))
+                report_error("Got invalid data from yt-dl: '{}'".format(yt_dl_info))
                 return videos_info
 
             # NOTE: This may contain a generator
@@ -423,7 +415,7 @@ init -15 python in ytm_utils:
 
                 # If we couldn't get the id, we should skip this video
                 if id_ is None or len(id_) != 11:
-                    writeLog(f"Got invalid video id: {id_}")
+                    report_error(f"Got invalid video id: '{id_}'")
                     continue
 
                 url = ytm_globals.YOUTUBE + ytm_globals.WATCH + id_
@@ -487,13 +479,13 @@ init -15 python in ytm_utils:
                     # Get list of dicts
                     formats = yt_dl_info.get("formats", ())
                     if not formats:
-                        writeLog("Got empty audio data from yt-dl.")
+                        report_error("Got empty audio data from yt-dl")
                         return None
 
                     # Now filter so we get the best format that works in renpy
                     best_format = max(formats, key=lambda frm: (frm.get("acodec") == "opus", frm.get("abr"), frm.get("asr")))
                     if best_format.get("acodec") != "opus":
-                        writeLog("No audio streams with opus codec found.")
+                        report_error("No audio streams with opus codec found")
                         return None
 
                     title = clean_string(yt_dl_info.get("title", "[An untitled video]"))
@@ -501,17 +493,17 @@ init -15 python in ytm_utils:
 
                     id_ = yt_dl_info.get("id", yt_dl_info.get("url", None))
                     if id_ is None or len(id_) != 11:
-                        writeLog("Got invalid video id from yt-dl: {0}".format(id_))
+                        report_error("Got invalid video id from yt-dl: '{}'".format(id_))
                         return None
 
                     content_size = None
                     stream_url = best_format.get("url")
                     if not stream_url:
                         if stream_url is None:
-                            writeLog("Audio stream is NoneType. Live streams are not supported yet.")
+                            report_error("Audio stream is NoneType. Live streams are not supported yet")
 
                         else:
-                            writeLog("Got invalid stream url from yt-dl: {0}.".format(stream_url))
+                            report_error("Got invalid stream url from yt-dl: '{}'".format(stream_url))
                         return None
 
                     content_size = best_format.get("filesize")
@@ -526,14 +518,14 @@ init -15 python in ytm_utils:
                             content_size = int(response.headers["Content-Length"])
 
                         except Exception as e:
-                            writeLog("Failed to request content size.", e)
+                            report_error("Failed to request content size", e)
                             return None
 
             except Exception as e:
                 e_type = type(e)
                 if e_type not in seen_errors:
                     seen_errors.add(e_type)
-                    writeLog("Failed to get audio info.", e)
+                    report_error("Failed to get audio info", e, True)
 
                 if tries <= 0:
                     return None
@@ -592,8 +584,7 @@ init -15 python in ytm_utils:
                 yt_dl.extract_info(url, download=True)
 
         except Exception as e:
-            # TODO: print stack too
-            writeLog("Failed to cache audio data.", e)
+            report_error("Failed to cache audio data", e, True)
             return False
 
         return True
@@ -645,7 +636,7 @@ init -15 python in ytm_utils:
             )
 
         except Exception as e:
-            writeLog("Failed to play audio.", e)
+            report_error("Failed to play audio", e, True)
             return False
 
         else:
