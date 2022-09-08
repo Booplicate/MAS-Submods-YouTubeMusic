@@ -673,21 +673,25 @@ init -15 python in ytm_utils:
         """
         This mean function spooks you and takes all your candies
         """
-        # start_ts = time()
-        # # Credits to T.L.B. Orchestration
-        # audio_info = get_audio_info("https://youtu.be/J7XtCHxVUto")
-        # if audio_info:
-        #     cache = cacheDataToRAM(audio_info["url"], audio_info["size"])
-        #     end_ts = time()
-        #     d_t = end_ts - start_ts
-        #     if cache and d_t < 15:
-        #         play_audio(
-        #             bytesToAudioData(cache, "Spook~"),
-        #             name="Spook~",
-        #             loop=False,
-        #             fadein=10,
-        #             set_ytm_flag=False
-        #         )
+        try:
+            start_ts = time()
+            # Credits to T.L.B. Orchestration
+            audio_info = get_audio_info("https://youtu.be/J7XtCHxVUto")
+            if audio_info:
+                result = download_audio(audio_info.url)
+                end_ts = time()
+                d_t = end_ts - start_ts
+                if result and d_t < 15:
+                    audio = f"{ytm_globals.SHORT_MUSIC_DIRECTORY}{audio_info.id}{ytm_globals.EXTENSION}"
+                    play_audio(
+                        audio,
+                        name="Spook~",
+                        loop=False,
+                        fadein=10,
+                        set_ytm_flag=False
+                    )
+        except Exception as e:
+            report_error("_do_o31_spook failed", e, True)
 
 # # # THREADING STUFF
 
@@ -717,7 +721,7 @@ init -10 python in ytm_threading:
             )
 
         except Exception as e:
-            ytm_utils.report_error("_search_music_th failed", e)
+            ytm_utils.report_error("_search_music_th failed", e, True)
             return None
 
     def _download_and_play_th(url, video_id, video_title, audio_size, clear_queue) -> bool:
@@ -740,7 +744,7 @@ init -10 python in ytm_threading:
                 return ytm_utils.play_audio(audio, name=video_title, clear_queue=clear_queue)
 
         except Exception as e:
-            ytm_utils.report_error("_download_and_play_th failed", e)
+            ytm_utils.report_error("_download_and_play_th failed", e, True)
 
         return False
 
@@ -758,7 +762,7 @@ init -10 python in ytm_threading:
             return ytm_utils.get_audio_info(url)
 
         except Exception as e:
-            ytm_utils.report_error("_get_audio_info_th failed", e)
+            ytm_utils.report_error("_get_audio_info_th failed", e, True)
             return None
 
     def _download_and_notify_th(url, title, content_size, directory) -> bool:
@@ -784,7 +788,7 @@ init -10 python in ytm_threading:
                 return True
 
         except Exception as e:
-            ytm_utils.report_error("_download_and_notify_th failed", e)
+            ytm_utils.report_error("_download_and_notify_th failed", e, True)
 
         return False
 
