@@ -38,7 +38,7 @@ label ytm_monika_introduction:
         m 1eua "So ask me when you're ready."
 
     $ mas_unlockEVL("ytm_monika_find_music", "EVE")
-    return
+    return "no_unlock"
 
 init 5 python:
     addEvent(
@@ -317,7 +317,7 @@ label ytm_monika_finished_caching_audio:
 
         else:
             m 1hua "There we go!"
-    return
+    return "no_unlock"
 
 # TODO: add a counter, if too many loops, abort
 label ytm_search_loop:

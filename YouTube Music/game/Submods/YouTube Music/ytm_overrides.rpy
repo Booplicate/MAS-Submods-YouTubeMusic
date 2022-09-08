@@ -387,7 +387,6 @@ init 100:
             label "Music Menu"
 
 
-# AudioData support for RenPy 6.99.12
 python early:
     import os
 
