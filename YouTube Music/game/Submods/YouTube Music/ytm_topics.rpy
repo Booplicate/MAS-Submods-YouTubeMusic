@@ -40,6 +40,7 @@ label ytm_monika_introduction:
     $ mas_unlockEVL("ytm_monika_find_music", "EVE")
     return "no_unlock"
 
+
 init 5 python:
     addEvent(
         Event(
@@ -148,7 +149,7 @@ label ytm_monika_find_music:
                 $ menu_list = _return
 
                 label .menu_display:
-                    if len(menu_list) > 0:
+                    if menu_list:
                         m 1eub "Alright! Look what I've found!"
                         show monika 1eua at t21
                         call screen mas_gen_scrollable_menu(menu_list, ytm_globals.SCR_MENU_AREA, ytm_globals.SCR_MENU_XALIGN, *ytm_globals.SCR_MENU_LAST_ITEMS)
@@ -279,6 +280,7 @@ label .ytm_process_audio_info(url, add_to_search_hist, add_to_audio_hist):
     $ del audio_info, has_failed
     return True
 
+
 init 5 python:
     addEvent(
         Event(
@@ -319,12 +321,16 @@ label ytm_monika_finished_caching_audio:
             m 1hua "There we go!"
     return "no_unlock"
 
-# TODO: add a counter, if too many loops, abort
+
 label ytm_search_loop:
-    if ytm_globals.first_pass:
+    if not ytm_globals.loop_count:
         $ ellipsis_count = 1
-        $ ytm_globals.first_pass = False
         $ ytm_threading.search_music.start()
+
+    elif ytm_globals.loop_count > 2*30:# 2 loops ~1 second
+        return None
+
+    $ ytm_globals.loop_count += 1
 
     if not ytm_threading.search_music.done():
         if ellipsis_count == 3:
@@ -342,27 +348,35 @@ label ytm_search_loop:
         $ _history_list.pop()
         m "Let me see what I can find...{fast}{nw}"
 
-        $ ytm_globals.first_pass = True
+        $ ytm_globals.loop_count = 0
         return ytm_threading.search_music.get()
 
 label ytm_get_audio_info_loop:
-    if ytm_globals.first_pass:
-        $ ytm_globals.first_pass = False
+    if not ytm_globals.loop_count:
         $ ytm_threading.get_audio_info.start()
+
+    elif ytm_globals.loop_count > 2*30:
+        return None
+
+    $ ytm_globals.loop_count += 1
 
     if not ytm_threading.get_audio_info.done():
         pause 0.5
         jump ytm_get_audio_info_loop
 
     else:
-        $ ytm_globals.first_pass = True
+        $ ytm_globals.loop_count = 0
         return ytm_threading.get_audio_info.get()
 
 label ytm_play_audio_loop:
-    if ytm_globals.first_pass:
+    if not ytm_globals.loop_count:
         $ ellipsis_count = 1
-        $ ytm_globals.first_pass = False
         $ ytm_threading.download_and_play.start()
+
+    elif ytm_globals.loop_count > 2*30:
+        return None
+
+    $ ytm_globals.loop_count += 1
 
     if not ytm_threading.download_and_play.done():
         if ellipsis_count == 3:
@@ -379,5 +393,5 @@ label ytm_play_audio_loop:
     else:
         $ _history_list.pop()
         m "Let me just play that for us...{fast}{nw}"
-        $ ytm_globals.first_pass = True
+        $ ytm_globals.loop_count = 0
         return ytm_threading.download_and_play.get()

@@ -104,8 +104,8 @@ init -20 python in ytm_globals:
         # "verbose": True,
     }
 
-    # Did we just start a loop or we're continuing looping?
-    first_pass = True
+    # Loop counter
+    loop_count = 0
     # a dict with the title and path to the audio we need to queue
     audio_to_queue = {"title": "", "path": ""}
     # Do we play an audio or no
