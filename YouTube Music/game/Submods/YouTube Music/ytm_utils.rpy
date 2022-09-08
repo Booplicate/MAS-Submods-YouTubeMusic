@@ -201,13 +201,13 @@ init -15 python in ytm_utils:
 # # # UTIL STUFF
 
     def _format_log(msg: str, err: Exception|None) -> str:
-        if e is not None:
-            e = f": {e}"
+        if err is not None:
+            err = f": {err}"
 
         else:
-            e = ""
+            err = ""
 
-        return f"[YTM]: {msg}{e}"
+        return f"[YTM]: {msg}{err}"
 
     def report_error(msg: str, err: Exception|None = None, print_stack: bool = False):
         submod_log.error(_format_log(msg, err), exc_info=print_stack)
