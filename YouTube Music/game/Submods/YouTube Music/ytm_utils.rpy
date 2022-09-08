@@ -698,7 +698,6 @@ init -10 python in ytm_threading:
         ytm_utils,
         mas_threading
     )
-    # TODO: wrap all _th funcs in a try/except
 
     def _search_music_th(raw_search_request: str):
         """
